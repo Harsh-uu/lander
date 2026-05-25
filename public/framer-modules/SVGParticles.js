@@ -1,3 +1,4 @@
+"use client";
 import {
   __objRest,
   __spreadProps,
@@ -332,7 +333,7 @@ function ParticleImage(_a) {
             W,
             H
           );
-          const f = Math.max(1, Math.min(10, sc)) / 10;
+          const f = Math.max(1, Math.min(20, sc)) / 10;
           const w = base.w * f;
           const h = base.h * f;
           rect = { x: (W - w) / 2, y: (H - h) / 2, w, h };
@@ -871,7 +872,7 @@ addPropertyControls(ParticleImage, {
         title: "Scale",
         defaultValue: 10,
         min: 1,
-        max: 10,
+        max: 20,
         step: 1,
         hidden: (props) => props.mode !== "fit"
       }

@@ -1,3 +1,4 @@
+"use client";
 import "./chunk-ORMEWXMH.js";
 
 // app/component/ImageGallery.tsx
@@ -514,11 +515,34 @@ function ImageGallery(props) {
       gsapScript.addEventListener("load", init);
     }
     return () => {
-      var _a;
+      var _a, _b;
       if (timerRef.current) clearInterval(timerRef.current);
       (_a = gsapScript._visCleanup) == null ? void 0 : _a.call(gsapScript);
+      const w = window;
+      if (w.gsap) {
+        try {
+          w.gsap.globalTimeline.clear();
+        } catch (e) {
+        }
+      }
+      (_b = containerRef.current) == null ? void 0 : _b.querySelectorAll("[data-tile]").forEach((el) => el.remove());
+      activeCountRef.current = 0;
+      zoneIdxRef.current = 0;
+      zIndexRef.current = 1;
+      recentImgsRef.current = [];
     };
-  }, []);
+  }, [
+    images,
+    background,
+    imageScale,
+    blankArea,
+    crowdDensity,
+    crowdDelay,
+    animType,
+    spiralDir,
+    appear,
+    disappear
+  ]);
   return /* @__PURE__ */ jsx(
     "div",
     {

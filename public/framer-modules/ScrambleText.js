@@ -1,3 +1,4 @@
+"use client";
 import {
   __spreadProps,
   __spreadValues
@@ -7,8 +8,8 @@ import {
 import { addPropertyControls, ControlType } from "framer";
 import { useState, useEffect, useRef, useLayoutEffect, Fragment } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
-var GLITCH_CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&";
-var GLITCH_CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz0123456789@#$%&";
+var GLITCH_CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+var GLITCH_CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz";
 var WAVE_CURSOR_CHARS = "\u2591\u2592\u2593\u2588";
 function cubicBezier(x1, y1, x2, y2) {
   const cx = 3 * x1;
@@ -59,7 +60,7 @@ function makeEaseFn(ease) {
   }
 }
 function GlitchCharReveal(props) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C;
   const { words, enterAnimation, hoverAnimation, color, font, tag } = props;
   const Tag = tag != null ? tag : "p";
   const glitchColor = color;
@@ -78,28 +79,30 @@ function GlitchCharReveal(props) {
   const enterFlickerEnabled = (_i = enterAnimation == null ? void 0 : enterAnimation.flickerEnabled) != null ? _i : false;
   const enterFlickerColor = (_j = enterAnimation == null ? void 0 : enterAnimation.flickerColor) != null ? _j : "#ff4400";
   const enterFlickerIntensity = (_k = enterAnimation == null ? void 0 : enterAnimation.flickerIntensity) != null ? _k : 50;
-  const hoverType = (_l = hoverAnimation == null ? void 0 : hoverAnimation.type) != null ? _l : "none";
-  const hoverLines = (_m = hoverAnimation == null ? void 0 : hoverAnimation.lines) != null ? _m : "oneLine";
+  const enterFlickerSpeed = (_l = enterAnimation == null ? void 0 : enterAnimation.flickerSpeed) != null ? _l : 10;
+  const hoverType = (_m = hoverAnimation == null ? void 0 : hoverAnimation.type) != null ? _m : "none";
+  const hoverLines = (_n = hoverAnimation == null ? void 0 : hoverAnimation.lines) != null ? _n : "oneLine";
   const hoverMode = hoverType === "diffusion" ? hoverLines === "oneLine" ? "diffusionOneLine" : "diffusionMultiLine" : hoverType === "wave" ? hoverLines === "oneLine" ? "waveOneLine" : "waveMultiLine" : "none";
-  const hoverRadius = (_n = hoverAnimation == null ? void 0 : hoverAnimation.radius) != null ? _n : 5;
-  const hoverCollapse = (_o = hoverAnimation == null ? void 0 : hoverAnimation.collapse) != null ? _o : false;
-  const hoverCollapseTime = (_p = hoverAnimation == null ? void 0 : hoverAnimation.collapseTime) != null ? _p : 1;
-  const hoverGlitchChars = (_q = hoverAnimation == null ? void 0 : hoverAnimation.glitchChars) != null ? _q : "01";
-  const hoverGlitchShuffle = (_r = hoverAnimation == null ? void 0 : hoverAnimation.glitchShuffle) != null ? _r : true;
-  const hoverFlickerEnabled = (_s = hoverAnimation == null ? void 0 : hoverAnimation.flickerEnabled) != null ? _s : false;
-  const hoverFlickerColor = (_t = hoverAnimation == null ? void 0 : hoverAnimation.flickerColor) != null ? _t : "#ff4400";
-  const hoverFlickerIntensity = (_u = hoverAnimation == null ? void 0 : hoverAnimation.flickerIntensity) != null ? _u : 50;
-  const waveEase = (_v = hoverAnimation == null ? void 0 : hoverAnimation.waveEase) != null ? _v : {
+  const hoverRadius = (_o = hoverAnimation == null ? void 0 : hoverAnimation.radius) != null ? _o : 5;
+  const hoverCollapse = (_p = hoverAnimation == null ? void 0 : hoverAnimation.collapse) != null ? _p : false;
+  const hoverCollapseTime = (_q = hoverAnimation == null ? void 0 : hoverAnimation.collapseTime) != null ? _q : 1;
+  const hoverGlitchChars = (_r = hoverAnimation == null ? void 0 : hoverAnimation.glitchChars) != null ? _r : "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const hoverGlitchShuffle = (_s = hoverAnimation == null ? void 0 : hoverAnimation.glitchShuffle) != null ? _s : true;
+  const hoverFlickerEnabled = (_t = hoverAnimation == null ? void 0 : hoverAnimation.flickerEnabled) != null ? _t : false;
+  const hoverFlickerColor = (_u = hoverAnimation == null ? void 0 : hoverAnimation.flickerColor) != null ? _u : "#ff4400";
+  const hoverFlickerIntensity = (_v = hoverAnimation == null ? void 0 : hoverAnimation.flickerIntensity) != null ? _v : 50;
+  const hoverFlickerSpeed = (_w = hoverAnimation == null ? void 0 : hoverAnimation.flickerSpeed) != null ? _w : 10;
+  const waveEase = (_x = hoverAnimation == null ? void 0 : hoverAnimation.waveEase) != null ? _x : {
     type: "tween",
     duration: 1.5,
     ease: "linear"
   };
-  const waveDuration = (_w = waveEase == null ? void 0 : waveEase.duration) != null ? _w : 1.5;
-  const waveEaseCurve = (_x = waveEase == null ? void 0 : waveEase.ease) != null ? _x : "linear";
-  const waveShuffleLimitEnabled = (_y = hoverAnimation == null ? void 0 : hoverAnimation.waveShuffleLimitEnabled) != null ? _y : false;
-  const waveShuffleLimitValue = (_z = hoverAnimation == null ? void 0 : hoverAnimation.waveShuffleLimitValue) != null ? _z : 10;
+  const waveDuration = (_y = waveEase == null ? void 0 : waveEase.duration) != null ? _y : 1.5;
+  const waveEaseCurve = (_z = waveEase == null ? void 0 : waveEase.ease) != null ? _z : "linear";
+  const waveShuffleLimitEnabled = (_A = hoverAnimation == null ? void 0 : hoverAnimation.waveShuffleLimitEnabled) != null ? _A : false;
+  const waveShuffleLimitValue = (_B = hoverAnimation == null ? void 0 : hoverAnimation.waveShuffleLimitValue) != null ? _B : 10;
   const typeface = font;
-  const textAlign = (_A = typeface == null ? void 0 : typeface.textAlign) != null ? _A : "left";
+  const textAlign = (_C = typeface == null ? void 0 : typeface.textAlign) != null ? _C : "left";
   const spanStyle = typeface ? Object.fromEntries(
     Object.entries(typeface).filter(([k]) => k !== "textAlign")
   ) : {};
@@ -119,6 +122,7 @@ function GlitchCharReveal(props) {
   const hoverCollapseTimeRef = useRef(hoverCollapseTime);
   const hoverFlickerEnabledRef = useRef(hoverFlickerEnabled);
   const hoverFlickerIntensityRef = useRef(hoverFlickerIntensity);
+  const hoverFlickerSpeedRef = useRef(hoverFlickerSpeed);
   const hoverGlitchCharsRef = useRef(hoverGlitchChars);
   const hoverGlitchShuffleRef = useRef(hoverGlitchShuffle);
   const waveDurationRef = useRef(waveDuration);
@@ -143,6 +147,9 @@ function GlitchCharReveal(props) {
   useEffect(() => {
     hoverFlickerIntensityRef.current = hoverFlickerIntensity;
   }, [hoverFlickerIntensity]);
+  useEffect(() => {
+    hoverFlickerSpeedRef.current = hoverFlickerSpeed;
+  }, [hoverFlickerSpeed]);
   useEffect(() => {
     hoverGlitchCharsRef.current = hoverGlitchChars;
   }, [hoverGlitchChars]);
@@ -278,45 +285,64 @@ function GlitchCharReveal(props) {
     setPlacedChars({});
     setEnterAnimComplete(false);
     const durationMs = enterDuration * 1e3;
-    let sequentialSteps;
-    if (enterMode === "multiLine") {
-      sequentialSteps = Math.max(
-        1,
-        ...lineGroups.map(
-          (g) => g.reduce((s, gWi) => s + allWords[gWi].text.length, 0)
-        )
-      );
-    } else {
-      sequentialSteps = Math.max(
-        1,
-        allWords.reduce((s, w) => s + w.text.length, 0)
-      );
-    }
+    const sequentialSteps = Math.max(
+      1,
+      allWords.reduce((s, w) => s + w.text.length, 0)
+    );
     const animStart = performance.now();
+    const animEndTime = animStart + durationMs;
     const easeFn = makeEaseFn(enterEaseCurve);
     const targetAt = (step) => animStart + durationMs * easeFn(step / sequentialSteps);
+    const targetAtScaled = (step, total) => animStart + durationMs * easeFn(step / Math.max(1, total));
+    const speedMult = 10 / Math.max(1, Math.min(20, enterFlickerSpeed));
+    const wordToLine = /* @__PURE__ */ new Map();
+    lineGroups.forEach(
+      (g, li) => g.forEach((gWi) => wordToLine.set(gWi, li))
+    );
+    const lineEndTimes = [];
+    if (enterMode === "oneLine") {
+      let cum = 0;
+      for (const group of lineGroups) {
+        cum += group.reduce(
+          (s, gWi) => s + allWords[gWi].text.length,
+          0
+        );
+        lineEndTimes.push(targetAt(cum));
+      }
+    }
+    const lineEndForChar = (gWi) => {
+      var _a2, _b2;
+      return enterMode === "oneLine" ? (_b2 = lineEndTimes[(_a2 = wordToLine.get(gWi)) != null ? _a2 : 0]) != null ? _b2 : animEndTime : animEndTime;
+    };
     const sleep = (ms) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
     const nextGlitchChar = (char) => {
       const isLower = char === char.toLowerCase() && char !== char.toUpperCase();
       const pool = isLower ? GLITCH_CHARS_LOWER : GLITCH_CHARS_UPPER;
       return pool[Math.floor(Math.random() * pool.length)];
     };
-    const maybeFlicker = async (id) => {
+    const maybeFlicker = async (id, endTime) => {
       const intensity = Math.max(0, Math.min(100, enterFlickerIntensity));
       if (!enterFlickerEnabled || intensity === 0) return;
       if (Math.random() > intensity / 100) return;
+      if (performance.now() >= endTime) return;
       const maxFlickers = Math.max(1, Math.round(intensity / 8));
       const flickers = Math.max(
         1,
         Math.round(maxFlickers / 2) + Math.floor(Math.random() * (maxFlickers / 2 + 1))
       );
       for (let i = 0; i < flickers; i++) {
-        await sleep(40 + Math.random() * 80);
+        await sleep((40 + Math.random() * 80) * speedMult);
         if (cancelled) return;
+        if (performance.now() >= endTime) {
+          setDisplays(
+            (p) => p[id] ? __spreadProps(__spreadValues({}, p), { [id]: __spreadProps(__spreadValues({}, p[id]), { flickering: false }) }) : p
+          );
+          return;
+        }
         setDisplays(
           (p) => p[id] ? __spreadProps(__spreadValues({}, p), { [id]: __spreadProps(__spreadValues({}, p[id]), { flickering: true }) }) : p
         );
-        await sleep(30 + Math.random() * 60);
+        await sleep((30 + Math.random() * 60) * speedMult);
         if (cancelled) return;
         setDisplays(
           (p) => p[id] ? __spreadProps(__spreadValues({}, p), { [id]: __spreadProps(__spreadValues({}, p[id]), { flickering: false }) }) : p
@@ -326,12 +352,13 @@ function GlitchCharReveal(props) {
     const animateChar = async (globalWi, ci, char, targetEnd) => {
       if (cancelled) return;
       const id = `${globalWi}-${ci}`;
+      const flickerEndTime = lineEndForChar(globalWi);
       if (char === "." || char === " ") {
         setDisplays((p) => __spreadProps(__spreadValues({}, p), {
           [id]: { char, locked: true, flickering: false }
         }));
         await sleep(targetEnd - performance.now());
-        maybeFlicker(id);
+        maybeFlicker(id, flickerEndTime);
         return;
       }
       const scrambleIntensity = Math.max(
@@ -370,7 +397,7 @@ function GlitchCharReveal(props) {
         [id]: { char, locked: true, flickering: false }
       }));
       await sleep(targetEnd - performance.now());
-      maybeFlicker(id);
+      maybeFlicker(id, flickerEndTime);
     };
     const shuffle = (arr) => {
       const a = [...arr];
@@ -406,12 +433,16 @@ function GlitchCharReveal(props) {
       } else if (enterMode === "multiLine") {
         await Promise.all(
           lineGroups.map(async (group) => {
+            const lineSteps = group.reduce(
+              (s, gWi) => s + allWords[gWi].text.length,
+              0
+            );
             let li = 0;
             for (const gWi of group) {
               if (cancelled) return;
               await animateWordInsert(
                 gWi,
-                () => targetAt(++li)
+                () => targetAtScaled(++li, lineSteps)
               );
             }
           })
@@ -446,6 +477,7 @@ function GlitchCharReveal(props) {
     enterMode,
     enterFlickerEnabled,
     enterFlickerIntensity,
+    enterFlickerSpeed,
     enterScrambleIntensity,
     enterDuration,
     enterEaseCurve,
@@ -542,6 +574,7 @@ function GlitchCharReveal(props) {
       0,
       Math.min(100, hoverFlickerIntensityRef.current)
     );
+    const speedMult = 10 / Math.max(1, Math.min(20, hoverFlickerSpeedRef.current));
     const maxFlickers = Math.max(1, Math.round(intensity / 8));
     const flickers = Math.max(
       1,
@@ -549,8 +582,8 @@ function GlitchCharReveal(props) {
     );
     let delay = 0;
     for (let i = 0; i < flickers; i++) {
-      const onAt = delay + Math.floor(15 + Math.random() * 50);
-      const offAt = onAt + Math.floor(25 + Math.random() * 55);
+      const onAt = delay + Math.floor((15 + Math.random() * 50) * speedMult);
+      const offAt = onAt + Math.floor((25 + Math.random() * 55) * speedMult);
       hoverFlickerTimersRef.current.push(
         setTimeout(
           () => setHoverFlickerSet((p) => {
@@ -1163,6 +1196,15 @@ addPropertyControls(GlitchCharReveal, {
         step: 1,
         unit: "%",
         hidden: (props) => props.mode === "none" || !props.flickerEnabled
+      },
+      flickerSpeed: {
+        title: "Flicker Speed",
+        type: ControlType.Number,
+        defaultValue: 10,
+        min: 1,
+        max: 20,
+        step: 1,
+        hidden: (props) => props.mode === "none" || !props.flickerEnabled
       }
     }
   },
@@ -1221,7 +1263,7 @@ addPropertyControls(GlitchCharReveal, {
       glitchChars: {
         title: "Glitch Chars",
         type: ControlType.String,
-        defaultValue: "01",
+        defaultValue: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
         placeholder: "Characters to show on hover",
         hidden: (props) => props.type !== "diffusion"
       },
@@ -1255,6 +1297,15 @@ addPropertyControls(GlitchCharReveal, {
         max: 100,
         step: 1,
         unit: "%",
+        hidden: (props) => props.type !== "diffusion" || !props.flickerEnabled
+      },
+      flickerSpeed: {
+        title: "Flicker Speed",
+        type: ControlType.Number,
+        defaultValue: 10,
+        min: 1,
+        max: 20,
+        step: 1,
         hidden: (props) => props.type !== "diffusion" || !props.flickerEnabled
       },
       // ── Wave ──────────────────────────────────────────────────────────

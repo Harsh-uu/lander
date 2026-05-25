@@ -664,8 +664,32 @@ export default function ImageGallery(props) {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
             gsapScript._visCleanup?.()
+            const w = window as any
+            if (w.gsap) {
+                try {
+                    w.gsap.globalTimeline.clear()
+                } catch {}
+            }
+            containerRef.current
+                ?.querySelectorAll("[data-tile]")
+                .forEach((el) => el.remove())
+            activeCountRef.current = 0
+            zoneIdxRef.current = 0
+            zIndexRef.current = 1
+            recentImgsRef.current = []
         }
-    }, [])
+    }, [
+        images,
+        background,
+        imageScale,
+        blankArea,
+        crowdDensity,
+        crowdDelay,
+        animType,
+        spiralDir,
+        appear,
+        disappear,
+    ])
 
     return (
         <div
