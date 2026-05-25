@@ -1,3 +1,6 @@
+// @ts-nocheck
+"use client"
+
 import { useEffect, useRef } from "react"
 import { addPropertyControls, ControlType } from "framer"
 // ── Helpers ────────────────────────────────────────────────────────────────

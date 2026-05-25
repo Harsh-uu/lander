@@ -1,3 +1,5 @@
+"use client"
+
 import { addPropertyControls, ControlType } from "framer"
 import { useState, useEffect, useRef } from "react"
 
@@ -23,6 +25,7 @@ function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
         return sampleY(Math.max(0, Math.min(1, t)))
     }
 }
+
 
 function makeEaseFn(ease: any): (t: number) => number {
     if (Array.isArray(ease) && ease.length === 4)
@@ -62,7 +65,7 @@ type RestState = "filled" | "outline" | "invisible"
 type ContentType = "text" | "image"
 type LetterFlickerMode = "stroke" | "opacity"
 type StrokePosition = "start" | "middle" | "end"
-export default function OutlineFillText(props) {
+export default function OutlineFillText(props: any) {
     const {
         contentType,
         text,
@@ -513,7 +516,7 @@ export default function OutlineFillText(props) {
     const Tag = tag as TagType
     return (
         <Tag
-            ref={elementRef}
+            ref={elementRef as any}
             onMouseEnter={handleMouseEnter}
             style={{
                 margin: 0,
@@ -637,7 +640,7 @@ addPropertyControls(OutlineFillText, {
                 ],
                 displaySegmentedControl: true,
                 hidden: (props: any) => props.triggerMode !== "enter",
-            },
+            } as any,
             restState: {
                 title: "Rest State",
                 type: ControlType.Enum,
@@ -690,7 +693,7 @@ addPropertyControls(OutlineFillText, {
                 ],
                 displaySegmentedControl: true,
                 hidden: (props: any) => !props.showStroke,
-            },
+            } as any,
             strokeCount: {
                 title: "Stroke Count",
                 type: ControlType.Number,

@@ -1,3 +1,5 @@
+"use client"
+
 import { addPropertyControls, ControlType } from "framer"
 import { useState, useEffect, useRef, useLayoutEffect, Fragment } from "react"
 
@@ -75,7 +77,7 @@ type WordEntry = {
 }
 type CharInfo = { id: string; cx: number; lineTop: number }
 
-export default function GlitchCharReveal(props) {
+export default function GlitchCharReveal(props: any) {
     const { words, enterAnimation, hoverAnimation, color, font, tag } = props
     const Tag = (tag ?? "p") as any
 
@@ -1441,8 +1443,8 @@ addPropertyControls(GlitchCharReveal, {
                     "text-align-bottom",
                 ],
                 displaySegmentedControl: true,
-                hidden: (props) => props.mode === "none",
-            },
+                hidden: (props: any) => props.mode === "none",
+            } as any,
             scrambleIntensity: {
                 title: "Scramble Intensity",
                 type: ControlType.Number,

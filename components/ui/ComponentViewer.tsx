@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toSvg } from "html-to-image"
 import { componentRegistry, type ComponentSlug } from "@/lib/components"
 
@@ -12,6 +12,8 @@ export default function ComponentViewer({ slug }: { slug: ComponentSlug }) {
     const previewRef = useRef<HTMLDivElement>(null)
     const [copied, setCopied] = useState<CopyTarget | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
 
     const flash = (target: CopyTarget) => {
         setCopied(target)
@@ -69,7 +71,7 @@ export { default } from "${entry.framerUrl}"`
                     marginBottom: 20,
                 }}
             >
-                <Component />
+                {mounted && <Component />}
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
