@@ -10,14 +10,17 @@ export default function ComponentViewer({ slug }: { slug: ComponentSlug }) {
     const [error, setError] = useState<string | null>(null)
 
     const copyComponent = async () => {
+        const base = window.location.origin
+        const file = entry.name.replace(/ /g, "")
+        const url = `${base}/framer-modules/${file}.js`
         const text = `/*
  * ${entry.name}
  *
  * Learn More: https://www.framer.com/asset-urls
  */
 
-export * from "${entry.framerUrl}"
-export { default } from "${entry.framerUrl}"`
+export * from "${url}"
+export { default } from "${url}"`
         try {
             await navigator.clipboard.writeText(text)
             setError(null)
