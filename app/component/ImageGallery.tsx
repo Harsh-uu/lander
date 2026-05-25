@@ -1,13 +1,6 @@
 // @ts-nocheck
 "use client"
 
-/**
- * @framerSupportedLayoutWidth fixed
- * @framerSupportedLayoutHeight fixed
- * @framerIntrinsicWidth 200
- * @framerIntrinsicHeight 200
- */
-
 import * as React from "react"
 import { useEffect, useRef } from "react"
 import { addPropertyControls, ControlType } from "framer"
@@ -106,6 +99,12 @@ function extractUrl(item) {
     return null
 }
 
+/**
+ * @framerSupportedLayoutWidth fixed
+ * @framerSupportedLayoutHeight fixed
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
+ */
 export default function ImageGallery(props) {
     const {
         background,
@@ -264,10 +263,7 @@ export default function ImageGallery(props) {
                 // actual spawn radius is driven entirely by blankArea.
                 const centerX = containerW / 2
                 const centerY = containerH / 2
-                const zoneAngle = Math.atan2(
-                    zone.cy - 50,
-                    zone.cx - 50
-                )
+                const zoneAngle = Math.atan2(zone.cy - 50, zone.cx - 50)
                 const angleJitter = rand(-0.25, 0.25)
                 const angle = zoneAngle + angleJitter + rand(-0.3, 0.3)
 
@@ -360,13 +356,10 @@ export default function ImageGallery(props) {
                     if (isSpiral) {
                         const path =
                             SPIRAL_PATHS[
-                                Math.floor(
-                                    Math.random() * SPIRAL_PATHS.length
-                                )
+                                Math.floor(Math.random() * SPIRAL_PATHS.length)
                             ]
                         const R =
-                            Math.hypot(containerW / 2, containerH / 2) *
-                            1.1
+                            Math.hypot(containerW / 2, containerH / 2) * 1.1
                         const startA = path.startAngle
                         const dirSetting = dirRef.current
                         const spinDir =
@@ -381,8 +374,7 @@ export default function ImageGallery(props) {
                         // Tile follows continuous spiral: start → mid (u=0.5) → end.
                         // Appear = first half of path. Disappear = second half.
                         const startR = appearDir === "inToOut" ? 0 : R
-                        const endR =
-                            disappearDir === "inToOut" ? R : 0
+                        const endR = disappearDir === "inToOut" ? R : 0
                         // Midpoint radius driven by blankArea: 0% = center,
                         // 100% = edge. Tile stops here after appearing.
                         const midR = R * (blankAreaRef.current / 100)
@@ -395,11 +387,8 @@ export default function ImageGallery(props) {
                                 u <= mid
                                     ? startR + (midR - startR) * (u / mid)
                                     : midR +
-                                      (endR - midR) *
-                                          ((u - mid) / (1 - mid))
-                            const a =
-                                startA +
-                                spinDir * u * turns * Math.PI * 2
+                                      (endR - midR) * ((u - mid) / (1 - mid))
+                            const a = startA + spinDir * u * turns * Math.PI * 2
                             return [Math.cos(a) * r, Math.sin(a) * r]
                         }
 
@@ -407,9 +396,7 @@ export default function ImageGallery(props) {
                         // inToOut appear: 0 → s2 over u 0 → 1 (grows).
                         // outToIn appear: s2 → 0 over u 0 → 1 (shrinks).
                         const scaleAt = (u: number) =>
-                            appearDir === "inToOut"
-                                ? s2 * u
-                                : s2 * (1 - u)
+                            appearDir === "inToOut" ? s2 * u : s2 * (1 - u)
 
                         const [sx, sy] = pathPos(0)
                         const tl = gsap.timeline({ onComplete: onDone })
@@ -427,8 +414,7 @@ export default function ImageGallery(props) {
                         //   - smoothly decelerates into drift
                         //   - smoothly accelerates out of drift into exit
                         // Opacity ramps over each phase's real time independently.
-                        const totalDur =
-                            entryDur + holdDur + zoopDur
+                        const totalDur = entryDur + holdDur + zoopDur
                         const appearEnd = entryDur
                         const driftEnd = entryDur + holdDur
                         const big = { t: 0 }
@@ -444,27 +430,19 @@ export default function ImageGallery(props) {
                                     0,
                                     Math.min(
                                         1,
-                                        t +
-                                            Math.sin(t * Math.PI * 2) *
-                                                0.12
+                                        t + Math.sin(t * Math.PI * 2) * 0.12
                                     )
                                 )
                                 let op: number
                                 if (realT < appearEnd) {
-                                    op =
-                                        entryDur > 0
-                                            ? realT / entryDur
-                                            : 1
+                                    op = entryDur > 0 ? realT / entryDur : 1
                                 } else if (realT < driftEnd) {
                                     op = 1
                                 } else {
                                     const since = realT - driftEnd
                                     op =
                                         fadeDur > 0
-                                            ? Math.max(
-                                                  0,
-                                                  1 - since / fadeDur
-                                              )
+                                            ? Math.max(0, 1 - since / fadeDur)
                                             : 0
                                 }
                                 const [x, y] = pathPos(u)
@@ -607,27 +585,17 @@ export default function ImageGallery(props) {
             let nextBatchAt = 0
             timerRef.current = setInterval(() => {
                 if (pausedRef.current) return
-                const target = Math.max(
-                    1,
-                    Math.round(crowdDensityRef.current)
-                )
+                const target = Math.max(1, Math.round(crowdDensityRef.current))
                 const delaySec = Math.max(0, crowdDelayRef.current)
                 const now = performance.now()
 
                 if (delaySec === 0) {
                     // Continuous flow: spawn paced by lifetime/target
-                    const entryDur =
-                        appearRef.current?.ease?.duration ?? 0.5
-                    const holdDur =
-                        appearRef.current?.ease?.delay ?? 0
-                    const zoopDur =
-                        disappearRef.current?.ease?.duration ?? 0.67
-                    const lifetimeMs =
-                        (entryDur + holdDur + zoopDur) * 1000
-                    const spawnInterval = Math.max(
-                        20,
-                        lifetimeMs / target
-                    )
+                    const entryDur = appearRef.current?.ease?.duration ?? 0.5
+                    const holdDur = appearRef.current?.ease?.delay ?? 0
+                    const zoopDur = disappearRef.current?.ease?.duration ?? 0.67
+                    const lifetimeMs = (entryDur + holdDur + zoopDur) * 1000
+                    const spawnInterval = Math.max(20, lifetimeMs / target)
                     if (now - lastSpawn >= spawnInterval) {
                         spawnTile()
                         lastSpawn = now

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { componentRegistry, type ComponentSlug } from "@/lib/components"
+import { supabase } from "@/lib/supabase"
 
 export default function ComponentViewer({ slug }: { slug: ComponentSlug }) {
     const entry = componentRegistry[slug]
@@ -14,6 +15,9 @@ export default function ComponentViewer({ slug }: { slug: ComponentSlug }) {
             setError(null)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
+            if (supabase) {
+                await supabase.rpc("increment_click", { slug_param: slug })
+            }
         } catch (e: any) {
             setError(e?.message ?? "Copy failed")
         }

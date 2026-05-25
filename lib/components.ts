@@ -8,7 +8,7 @@ export const componentRegistry = {
         name: "Flicker",
         Component: Flicker,
         framerUrl:
-            "https://framer.com/m/FlickerText-wBddWw.js@pdE50YWeVzotCoNXb5o9",
+            "https://framer.com/m/FlickerText-wBddWw.js@iaSl8kOGBQNJiSHAKwwf",
         defaultProps: {
             contentType: "text",
             text: "Flicker",
@@ -30,7 +30,7 @@ export const componentRegistry = {
         name: "Scramble Text",
         Component: ScrambleText,
         framerUrl:
-            "https://framer.com/m/GlitchReveal-yJrAov.js@J83TSYyiotyY6e0Iuy71",
+            "https://framer.com/m/GlitchReveal-yJrAov.js@CkEMHytnATaA1moXFnZf",
         defaultProps: {
             words: "Scramble\nText",
             tag: "h1",
@@ -42,7 +42,7 @@ export const componentRegistry = {
         name: "SVG Particles",
         Component: SVGParticles,
         framerUrl:
-            "https://framer.com/m/SvgMapper-Xp5dP5.js@mki6qSA9WljVV8SZT3qs",
+            "https://framer.com/m/SvgMapper-Xp5dP5.js@HrY2NkfEbXlV1CFS0FeH",
         defaultProps: {},
     },
 } as const

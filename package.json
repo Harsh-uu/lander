@@ -10,6 +10,7 @@
     "build:framer": "tsup"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "framer": "^3.0.4",
     "html-to-image": "^1.11.13",
     "next": "16.2.6",
