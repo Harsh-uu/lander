@@ -41,11 +41,17 @@ export default function ComponentViewer({ slug }: { slug: ComponentSlug }) {
                     onClick={copyComponent}
                     className="min-w-48 px-6 py-3 text-sm font-medium tracking-wide border border-black bg-black text-white hover:bg-neutral-800"
                 >
-                    {copied ? "Copied!" : "Copy Component"}
+                    Copy Component
                 </button>
-                {error && (
-                    <p className="mt-4 text-sm text-red-600">{error}</p>
-                )}
+                <div className="mt-4 h-5 text-sm">
+                    {error ? (
+                        <span className="text-red-600">{error}</span>
+                    ) : copied ? (
+                        <span className="text-neutral-700">
+                            Component copied, directly paste it in Framer
+                        </span>
+                    ) : null}
+                </div>
             </div>
         </main>
     )
