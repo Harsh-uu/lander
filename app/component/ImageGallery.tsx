@@ -2,8 +2,8 @@
 "use client"
 
 /**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
+ * @framerSupportedLayoutWidth fixed
+ * @framerSupportedLayoutHeight fixed
  * @framerIntrinsicWidth 200
  * @framerIntrinsicHeight 200
  */
