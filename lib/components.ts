@@ -22,9 +22,10 @@ export const componentRegistry = {
         name: "Image Gallery",
         Component: ImageGallery,
         framerUrl:
-            "https://framer.com/m/ImageGallery-3YC6Rw.js@RmIGatkP6Ozum1dc04rv",
+            "https://framer.com/m/ImageGallery-3YC6Rw.js@FYfO00JRiqAinPcYUgHE",
         defaultProps: {},
     },
+    
     "scramble-text": {
         name: "Scramble Text",
         Component: ScrambleText,
