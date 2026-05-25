@@ -4,6 +4,8 @@
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
  */
 
 import * as React from "react"

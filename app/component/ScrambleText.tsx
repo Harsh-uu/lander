@@ -77,6 +77,12 @@ type WordEntry = {
 }
 type CharInfo = { id: string; cx: number; lineTop: number }
 
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
+ */
 export default function GlitchCharReveal(props: any) {
     const { words, enterAnimation, hoverAnimation, color, font, tag } = props
     const Tag = (tag ?? "p") as any

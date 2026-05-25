@@ -131,6 +131,12 @@ function buildImageCfg(m: any): FlickerCfg {
 
 const DEFAULT_TEXT_CFG = buildTextCfg(undefined)
 
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
+ */
 export default function OutlineFillText(props: any) {
     const {
         contentType,

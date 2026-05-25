@@ -136,6 +136,12 @@ function mkParticle(src, x, y, idleX, idleY, isExtra = false) {
         repTargetY: 0,
     }
 }
+/**
+ * @framerSupportedLayoutWidth any
+ * @framerSupportedLayoutHeight any
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
+ */
 export default function ParticleImage({
     imageConfig,
     particleCount,

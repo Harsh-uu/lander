@@ -24,6 +24,8 @@ function containRect(iW: number, iH: number, cW: number, cH: number) {
 /**
  * @framerSupportedLayoutWidth any
  * @framerSupportedLayoutHeight any
+ * @framerIntrinsicWidth 200
+ * @framerIntrinsicHeight 200
  */
 export default function ParticleImageMask(props: any) {
     const {
