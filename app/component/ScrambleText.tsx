@@ -1,0 +1,1639 @@
+import { addPropertyControls, ControlType } from "framer"
+import { useState, useEffect, useRef, useLayoutEffect, Fragment } from "react"
+
+const GLITCH_CHARS_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&"
+const GLITCH_CHARS_LOWER = "abcdefghijklmnopqrstuvwxyz0123456789@#$%&"
+const WAVE_CURSOR_CHARS = "░▒▓█"
+
+function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+    const cx = 3 * x1
+    const bx = 3 * (x2 - x1) - cx
+    const ax = 1 - cx - bx
+    const cy = 3 * y1
+    const by = 3 * (y2 - y1) - cy
+    const ay = 1 - cy - by
+    const sampleX = (t: number) => ((ax * t + bx) * t + cx) * t
+    const sampleY = (t: number) => ((ay * t + by) * t + cy) * t
+    const sampleDX = (t: number) => (3 * ax * t + 2 * bx) * t + cx
+    return (x: number) => {
+        let t = x
+        for (let i = 0; i < 8; i++) {
+            const dx = sampleX(t) - x
+            const d = sampleDX(t)
+            if (Math.abs(dx) < 1e-6) break
+            if (d === 0) break
+            t -= dx / d
+        }
+        return sampleY(Math.max(0, Math.min(1, t)))
+    }
+}
+
+function makeEaseFn(ease: any): (t: number) => number {
+    if (Array.isArray(ease) && ease.length === 4)
+        return cubicBezier(ease[0], ease[1], ease[2], ease[3])
+    switch (ease) {
+        case "linear":
+            return (t) => t
+        case "easeIn":
+            return (t) => t * t
+        case "easeOut":
+            return (t) => 1 - (1 - t) * (1 - t)
+        case "easeInOut":
+            return (t) => (t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t))
+        case "circIn":
+            return (t) => 1 - Math.sqrt(1 - t * t)
+        case "circOut":
+            return (t) => Math.sqrt(1 - (t - 1) * (t - 1))
+        case "circInOut":
+            return (t) =>
+                t < 0.5
+                    ? (1 - Math.sqrt(1 - 4 * t * t)) / 2
+                    : (Math.sqrt(1 - (-2 * t + 2) * (-2 * t + 2)) + 1) / 2
+        case "backIn":
+            return (t) => 2.70158 * t * t * t - 1.70158 * t * t
+        case "backOut":
+            return (t) =>
+                1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2
+        default:
+            return (t) => 1 - (1 - t) * (1 - t)
+    }
+}
+
+type EnterMode = "none" | "oneLine" | "multiLine" | "random"
+type HoverMode =
+    | "none"
+    | "diffusionOneLine"
+    | "diffusionMultiLine"
+    | "waveOneLine"
+    | "waveMultiLine"
+type CharState = { char: string; locked: boolean; flickering: boolean }
+type WordEntry = {
+    text: string
+    pi: number
+    wiInPara: number
+    globalWi: number
+}
+type CharInfo = { id: string; cx: number; lineTop: number }
+
+export default function GlitchCharReveal(props) {
+    const { words, enterAnimation, hoverAnimation, color, font, tag } = props
+    const Tag = (tag ?? "p") as any
+
+    const glitchColor = color
+
+    // ── Enter props ───────────────────────────────────────────────────────────
+    const enterMode: EnterMode = enterAnimation?.mode ?? "oneLine"
+    const enterEase: any = enterAnimation?.ease ?? {
+        type: "tween",
+        duration: 2,
+        ease: "easeOut",
+    }
+    const enterDuration: number = enterEase?.duration ?? 2
+    const enterEaseCurve: any = enterEase?.ease ?? "easeOut"
+    const enterScrambleIntensity: number =
+        enterAnimation?.scrambleIntensity ?? 50
+    const enterReplay: boolean = enterAnimation?.replay ?? false
+    const enterPosition: string = enterAnimation?.position ?? "above"
+    const enterRestState: string = enterAnimation?.restState ?? "hidden"
+    const enterFlickerEnabled: boolean = enterAnimation?.flickerEnabled ?? false
+    const enterFlickerColor: string = enterAnimation?.flickerColor ?? "#ff4400"
+    const enterFlickerIntensity: number =
+        enterAnimation?.flickerIntensity ?? 50
+
+    // ── Hover props ───────────────────────────────────────────────────────────
+    const hoverType: string = hoverAnimation?.type ?? "none"
+    const hoverLines: string = hoverAnimation?.lines ?? "oneLine"
+    const hoverMode: HoverMode =
+        hoverType === "diffusion"
+            ? hoverLines === "oneLine"
+                ? "diffusionOneLine"
+                : "diffusionMultiLine"
+            : hoverType === "wave"
+              ? hoverLines === "oneLine"
+                  ? "waveOneLine"
+                  : "waveMultiLine"
+              : "none"
+
+    const hoverRadius: number = hoverAnimation?.radius ?? 5
+    const hoverCollapse: boolean = hoverAnimation?.collapse ?? false
+    const hoverCollapseTime: number = hoverAnimation?.collapseTime ?? 1
+    const hoverGlitchChars: string = hoverAnimation?.glitchChars ?? "01"
+    const hoverGlitchShuffle: boolean = hoverAnimation?.glitchShuffle ?? true
+    const hoverFlickerEnabled: boolean = hoverAnimation?.flickerEnabled ?? false
+    const hoverFlickerColor: string = hoverAnimation?.flickerColor ?? "#ff4400"
+    const hoverFlickerIntensity: number =
+        hoverAnimation?.flickerIntensity ?? 50
+    const waveEase: any = hoverAnimation?.waveEase ?? {
+        type: "tween",
+        duration: 1.5,
+        ease: "linear",
+    }
+    const waveDuration: number = waveEase?.duration ?? 1.5
+    const waveEaseCurve: any = waveEase?.ease ?? "linear"
+    const waveShuffleLimitEnabled: boolean =
+        hoverAnimation?.waveShuffleLimitEnabled ?? false
+    const waveShuffleLimitValue: number =
+        hoverAnimation?.waveShuffleLimitValue ?? 10
+
+    // ── Font ──────────────────────────────────────────────────────────────────
+    const typeface = font
+    const textAlign: string = (typeface as any)?.textAlign ?? "left"
+
+    const spanStyle = typeface
+        ? Object.fromEntries(
+              Object.entries(typeface).filter(([k]) => k !== "textAlign")
+          )
+        : {}
+
+    const paragraphs: string[][] = (words as string)
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/).filter(Boolean))
+        .filter((p) => p.length > 0)
+
+    const allWords: WordEntry[] = []
+    paragraphs.forEach((paraWords, pi) => {
+        paraWords.forEach((text, wiInPara) => {
+            allWords.push({ text, pi, wiInPara, globalWi: allWords.length })
+        })
+    })
+
+    // ── Refs ──────────────────────────────────────────────────────────────────
+    const containerRef = useRef<HTMLDivElement | null>(null)
+    const ghostRefs = useRef<(HTMLSpanElement | null)[]>([])
+    const charRefs = useRef<Record<string, HTMLSpanElement | null>>({})
+
+    const hoverModeRef = useRef(hoverMode)
+    const hoverRadiusRef = useRef(hoverRadius)
+    const hoverCollapseRef = useRef(hoverCollapse)
+    const hoverCollapseTimeRef = useRef(hoverCollapseTime)
+    const hoverFlickerEnabledRef = useRef(hoverFlickerEnabled)
+    const hoverFlickerIntensityRef = useRef(hoverFlickerIntensity)
+    const hoverGlitchCharsRef = useRef(hoverGlitchChars)
+    const hoverGlitchShuffleRef = useRef(hoverGlitchShuffle)
+    const waveDurationRef = useRef(waveDuration)
+    const waveEaseCurveRef = useRef(waveEaseCurve)
+    const waveShuffleLimitEnabledRef = useRef(waveShuffleLimitEnabled)
+    const waveShuffleLimitValueRef = useRef(waveShuffleLimitValue)
+
+    useEffect(() => {
+        hoverModeRef.current = hoverMode
+    }, [hoverMode])
+    useEffect(() => {
+        hoverRadiusRef.current = hoverRadius
+    }, [hoverRadius])
+    useEffect(() => {
+        hoverCollapseRef.current = hoverCollapse
+    }, [hoverCollapse])
+    useEffect(() => {
+        hoverCollapseTimeRef.current = hoverCollapseTime
+    }, [hoverCollapseTime])
+    useEffect(() => {
+        hoverFlickerEnabledRef.current = hoverFlickerEnabled
+    }, [hoverFlickerEnabled])
+    useEffect(() => {
+        hoverFlickerIntensityRef.current = hoverFlickerIntensity
+    }, [hoverFlickerIntensity])
+    useEffect(() => {
+        hoverGlitchCharsRef.current = hoverGlitchChars
+    }, [hoverGlitchChars])
+    useEffect(() => {
+        hoverGlitchShuffleRef.current = hoverGlitchShuffle
+    }, [hoverGlitchShuffle])
+    useEffect(() => {
+        waveDurationRef.current = waveDuration
+    }, [waveDuration])
+    useEffect(() => {
+        waveEaseCurveRef.current = waveEaseCurve
+    }, [waveEaseCurve])
+    useEffect(() => {
+        waveShuffleLimitEnabledRef.current = waveShuffleLimitEnabled
+    }, [waveShuffleLimitEnabled])
+    useEffect(() => {
+        waveShuffleLimitValueRef.current = waveShuffleLimitValue
+    }, [waveShuffleLimitValue])
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    const [lineGroups, setLineGroups] = useState<number[][]>([])
+    const [displays, setDisplays] = useState<Record<string, CharState>>({})
+    const [placedChars, setPlacedChars] = useState<Record<number, number[]>>({})
+    const [shouldAnimate, setShouldAnimate] = useState(false)
+    const [enterAnimComplete, setEnterAnimComplete] = useState(false)
+    const [hoverDisplays, setHoverDisplays] = useState<Record<string, string>>(
+        {}
+    )
+    const [hoverFlickerSet, setHoverFlickerSet] = useState<Set<string>>(
+        new Set()
+    )
+
+    const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const hoverFlickerTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+    const lastMidIdRef = useRef<string>("")
+    const multiWaveTriggeredRef = useRef(false)
+    const oneWaveTriggeredLinesRef = useRef<Set<number>>(new Set())
+    const lastOneWaveLineRef = useRef<number | null>(null)
+    const hasPlayedRef = useRef(false)
+    const hoverRandomCharsRef = useRef<Record<string, string>>({})
+    const hoverSceneRef = useRef<{
+        lineMap: Map<number, CharInfo[]>
+        lineTopValues: number[]
+        closestLineIdx: number
+        midCx: number
+        closestLineTop: number
+    } | null>(null)
+
+    // waveMultiLine: single global wave
+    const waveRafRef = useRef<number | null>(null)
+    const waveCancelRef = useRef(false)
+    const wavePlayingRef = useRef(false)
+
+    // waveOneLine: independent per-line waves that can run simultaneously.
+    // Each line is keyed by its measured lineTop pixel value.
+    const lineWaveRafsRef = useRef<Map<number, number>>(new Map()) // lineTop → rAF id
+    const lineWavePlayingRef = useRef<Set<number>>(new Set()) // currently playing lines
+
+    // ── Line detection ────────────────────────────────────────────────────────
+    const detectLines = () => {
+        const allLines: number[][] = []
+        paragraphs.forEach((_, pi) => {
+            const paraEntries = allWords.filter((w) => w.pi === pi)
+            const measured = paraEntries
+                .map((w) => ({
+                    globalWi: w.globalWi,
+                    top: ghostRefs.current[w.globalWi]
+                        ? Math.round(
+                              ghostRefs.current[
+                                  w.globalWi
+                              ]!.getBoundingClientRect().top
+                          )
+                        : -1,
+                }))
+                .filter((m) => m.top >= 0)
+            const tops = [...new Set(measured.map((m) => m.top))].sort(
+                (a, b) => a - b
+            )
+            tops.forEach((top) =>
+                allLines.push(
+                    measured.filter((m) => m.top === top).map((m) => m.globalWi)
+                )
+            )
+        })
+        setLineGroups(allLines)
+    }
+
+    useLayoutEffect(() => {
+        detectLines()
+    }, [words, font])
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const obs = new ResizeObserver(() => detectLines())
+        obs.observe(el)
+        return () => obs.disconnect()
+    }, [])
+
+    useEffect(() => {
+        setShouldAnimate(false)
+        setDisplays({})
+        setPlacedChars({})
+        setEnterAnimComplete(false)
+    }, [enterMode, words])
+
+    useEffect(() => {
+        // Cancel all wave animations
+        waveCancelRef.current = true
+        wavePlayingRef.current = false
+        if (waveRafRef.current) {
+            cancelAnimationFrame(waveRafRef.current)
+            waveRafRef.current = null
+        }
+        lineWaveRafsRef.current.forEach((id) => cancelAnimationFrame(id))
+        lineWaveRafsRef.current.clear()
+        lineWavePlayingRef.current.clear()
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+        hoverFlickerTimersRef.current.forEach(clearTimeout)
+        hoverFlickerTimersRef.current = []
+        lastMidIdRef.current = ""
+        hoverRandomCharsRef.current = {}
+        hoverSceneRef.current = null
+        setHoverDisplays({})
+        setHoverFlickerSet(new Set())
+    }, [hoverMode, words])
+
+    // ── IntersectionObserver ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (enterMode === "none") return
+        const el = containerRef.current
+        if (!el) return
+        // Threshold-based position: above=any visible, middle=half, below=full
+        let threshold = 0
+        if (enterPosition === "middle") threshold = 0.5
+        else if (enterPosition === "below") threshold = 1.0
+        const obs = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    if (!hasPlayedRef.current) {
+                        hasPlayedRef.current = true
+                        setShouldAnimate(true)
+                        if (!enterReplay) obs.disconnect()
+                    }
+                } else if (enterReplay) {
+                    hasPlayedRef.current = false
+                    setShouldAnimate(false)
+                    setDisplays({})
+                    setPlacedChars({})
+                    setEnterAnimComplete(false)
+                }
+            },
+            { threshold }
+        )
+        obs.observe(el)
+        return () => obs.disconnect()
+    }, [enterMode, lineGroups, enterReplay, enterPosition, enterRestState])
+
+    // ── Enter animation ───────────────────────────────────────────────────────
+    useEffect(() => {
+        if (enterMode === "none" || !shouldAnimate || lineGroups.length === 0)
+            return
+        let cancelled = false
+        setDisplays({})
+        setPlacedChars({})
+        setEnterAnimComplete(false)
+
+        const durationMs = enterDuration * 1000
+        let sequentialSteps: number
+        if (enterMode === "multiLine") {
+            sequentialSteps = Math.max(
+                1,
+                ...lineGroups.map((g) =>
+                    g.reduce((s, gWi) => s + allWords[gWi].text.length, 0)
+                )
+            )
+        } else {
+            sequentialSteps = Math.max(
+                1,
+                allWords.reduce((s, w) => s + w.text.length, 0)
+            )
+        }
+        const animStart = performance.now()
+        const easeFn = makeEaseFn(enterEaseCurve)
+        const targetAt = (step: number) =>
+            animStart + durationMs * easeFn(step / sequentialSteps)
+        const sleep = (ms: number) =>
+            new Promise<void>((r) => setTimeout(r, Math.max(0, ms)))
+
+        // Glitch chars for enter animation: use default A-Z / a-z pool based on case
+        const nextGlitchChar = (char: string): string => {
+            const isLower =
+                char === char.toLowerCase() && char !== char.toUpperCase()
+            const pool = isLower ? GLITCH_CHARS_LOWER : GLITCH_CHARS_UPPER
+            return pool[Math.floor(Math.random() * pool.length)]
+        }
+
+        const maybeFlicker = async (id: string) => {
+            const intensity = Math.max(0, Math.min(100, enterFlickerIntensity))
+            if (!enterFlickerEnabled || intensity === 0) return
+            if (Math.random() > intensity / 100) return
+            const maxFlickers = Math.max(1, Math.round(intensity / 8))
+            const flickers = Math.max(
+                1,
+                Math.round(maxFlickers / 2) +
+                    Math.floor(Math.random() * (maxFlickers / 2 + 1))
+            )
+            for (let i = 0; i < flickers; i++) {
+                await sleep(40 + Math.random() * 80)
+                if (cancelled) return
+                setDisplays((p) =>
+                    p[id] ? { ...p, [id]: { ...p[id], flickering: true } } : p
+                )
+                await sleep(30 + Math.random() * 60)
+                if (cancelled) return
+                setDisplays((p) =>
+                    p[id] ? { ...p, [id]: { ...p[id], flickering: false } } : p
+                )
+            }
+        }
+
+        const animateChar = async (
+            globalWi: number,
+            ci: number,
+            char: string,
+            targetEnd: number
+        ) => {
+            if (cancelled) return
+            const id = `${globalWi}-${ci}`
+            if (char === "." || char === " ") {
+                setDisplays((p) => ({
+                    ...p,
+                    [id]: { char, locked: true, flickering: false },
+                }))
+                await sleep(targetEnd - performance.now())
+                maybeFlicker(id)
+                return
+            }
+            const scrambleIntensity = Math.max(
+                0,
+                Math.min(100, enterScrambleIntensity)
+            )
+            const desiredFrames =
+                scrambleIntensity === 0
+                    ? 0
+                    : 1 +
+                      Math.floor(
+                          Math.random() * Math.round(scrambleIntensity / 7)
+                      )
+            const window = targetEnd - performance.now()
+            const minDelay = 15
+            const maxFitFrames = Math.max(
+                1,
+                Math.floor((window * 0.8) / minDelay)
+            )
+            const glitchFrames = Math.min(desiredFrames, maxFitFrames)
+            const glitchDelay =
+                glitchFrames > 0
+                    ? Math.max(
+                          minDelay,
+                          Math.floor((window * 0.8) / glitchFrames)
+                      )
+                    : minDelay
+            if (glitchFrames > 0) {
+                for (let i = 0; i < glitchFrames; i++) {
+                    if (cancelled) return
+                    setDisplays((p) => ({
+                        ...p,
+                        [id]: {
+                            char: nextGlitchChar(char),
+                            locked: false,
+                            flickering: false,
+                        },
+                    }))
+                    await sleep(glitchDelay)
+                    if (cancelled) return
+                }
+            }
+            setDisplays((p) => ({
+                ...p,
+                [id]: { char, locked: true, flickering: false },
+            }))
+            await sleep(targetEnd - performance.now())
+            maybeFlicker(id)
+        }
+
+        const shuffle = (arr: number[]) => {
+            const a = [...arr]
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1))
+                ;[a[i], a[j]] = [a[j], a[i]]
+            }
+            return a
+        }
+
+        const animateWordInsert = async (
+            gWi: number,
+            getTargetEnd: () => number
+        ) => {
+            const word = allWords[gWi].text
+            for (const ci of shuffle(word.split("").map((_, ci) => ci))) {
+                if (cancelled) return
+                setPlacedChars((p) => {
+                    const cur = p[gWi] ?? []
+                    return { ...p, [gWi]: [...cur, ci].sort((a, b) => a - b) }
+                })
+                await animateChar(gWi, ci, word[ci], getTargetEnd())
+            }
+        }
+
+        const run = async () => {
+            if (enterMode === "oneLine") {
+                let idx = 0
+                for (const group of lineGroups)
+                    for (const gWi of group) {
+                        if (cancelled) return
+                        await animateWordInsert(
+                            gWi,
+                            () => targetAt(++idx)
+                        )
+                    }
+            } else if (enterMode === "multiLine") {
+                await Promise.all(
+                    lineGroups.map(async (group) => {
+                        let li = 0
+                        for (const gWi of group) {
+                            if (cancelled) return
+                            await animateWordInsert(
+                                gWi,
+                                () => targetAt(++li)
+                            )
+                        }
+                    })
+                )
+            } else {
+                const all: { globalWi: number; ci: number; char: string }[] = []
+                allWords.forEach((w) =>
+                    w.text
+                        .split("")
+                        .forEach((char, ci) =>
+                            all.push({ globalWi: w.globalWi, ci, char })
+                        )
+                )
+                for (let i = all.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1))
+                    ;[all[i], all[j]] = [all[j], all[i]]
+                }
+                let idx = 0
+                for (const { globalWi, ci, char } of all) {
+                    if (cancelled) return
+                    await animateChar(globalWi, ci, char, targetAt(++idx))
+                }
+            }
+        }
+
+        ;(async () => {
+            await run()
+            if (!cancelled) setEnterAnimComplete(true)
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [
+        lineGroups,
+        enterMode,
+        enterFlickerEnabled,
+        enterFlickerIntensity,
+        enterScrambleIntensity,
+        enterDuration,
+        enterEaseCurve,
+        shouldAnimate,
+    ])
+
+    useEffect(
+        () => () => {
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+            if (waveRafRef.current) cancelAnimationFrame(waveRafRef.current)
+            lineWaveRafsRef.current.forEach((id) => cancelAnimationFrame(id))
+            hoverFlickerTimersRef.current.forEach(clearTimeout)
+        },
+        []
+    )
+
+    // ── Diffusion helpers ─────────────────────────────────────────────────────
+
+    const getOrSetHoverChar = (id: string, offset: number): string => {
+        if (hoverRandomCharsRef.current[id] === undefined) {
+            const pool = hoverGlitchCharsRef.current.trim()
+            if (pool.length === 0) {
+                hoverRandomCharsRef.current[id] =
+                    Math.random() < 0.5 ? "0" : "1"
+            } else if (hoverGlitchShuffleRef.current) {
+                hoverRandomCharsRef.current[id] =
+                    pool[Math.floor(Math.random() * pool.length)]
+            } else {
+                const len = pool.length
+                hoverRandomCharsRef.current[id] =
+                    pool[((offset % len) + len) % len]
+            }
+        }
+        return hoverRandomCharsRef.current[id]
+    }
+
+    const buildHoverDisplays = (radius: number): Record<string, string> => {
+        const scene = hoverSceneRef.current
+        if (!scene) return {}
+        const {
+            lineMap,
+            lineTopValues,
+            closestLineIdx,
+            midCx,
+            closestLineTop,
+        } = scene
+        const out: Record<string, string> = {}
+        const applyLine = (lineTop: number, r: number) => {
+            const chars = lineMap.get(lineTop)
+            if (!chars || chars.length === 0 || r < 0) return
+            const firstChar = chars[0]
+            const lastChar = chars[chars.length - 1]
+            const avgSpacing =
+                chars.length > 1
+                    ? (lastChar.cx - firstChar.cx) / (chars.length - 1)
+                    : 20
+
+            // Find pivot (char with cx closest to midCx)
+            let pivotIdx = 0,
+                minD = Infinity
+            chars.forEach((c, i) => {
+                const d = Math.abs(c.cx - midCx)
+                if (d < minD) {
+                    minD = d
+                    pivotIdx = i
+                }
+            })
+
+            // Skip line if pivot is too far horizontally from hover position.
+            // Keeps shorter lines from lighting up when hover is far past them.
+            if (minD > (r + 0.5) * avgSpacing) return
+
+            for (
+                let idx = Math.max(0, pivotIdx - r);
+                idx <= Math.min(chars.length - 1, pivotIdx + r);
+                idx++
+            )
+                out[chars[idx].id] = getOrSetHoverChar(
+                    chars[idx].id,
+                    idx - pivotIdx
+                )
+        }
+        if (hoverModeRef.current === "diffusionOneLine") {
+            applyLine(closestLineTop, radius)
+        } else {
+            lineTopValues.forEach((lt, li) =>
+                applyLine(lt, radius - Math.abs(li - closestLineIdx))
+            )
+        }
+        return out
+    }
+
+    const clearFlickerTimers = () => {
+        hoverFlickerTimersRef.current.forEach(clearTimeout)
+        hoverFlickerTimersRef.current = []
+    }
+
+    const clearHoverState = () => {
+        waveCancelRef.current = true
+        wavePlayingRef.current = false
+        if (waveRafRef.current) {
+            cancelAnimationFrame(waveRafRef.current)
+            waveRafRef.current = null
+        }
+        lineWaveRafsRef.current.forEach((id) => cancelAnimationFrame(id))
+        lineWaveRafsRef.current.clear()
+        lineWavePlayingRef.current.clear()
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+        clearFlickerTimers()
+        lastMidIdRef.current = ""
+        hoverRandomCharsRef.current = {}
+        hoverSceneRef.current = null
+        setHoverDisplays({})
+        setHoverFlickerSet(new Set())
+    }
+
+    const flickerChar = (id: string) => {
+        const intensity = Math.max(
+            0,
+            Math.min(100, hoverFlickerIntensityRef.current)
+        )
+        const maxFlickers = Math.max(1, Math.round(intensity / 8))
+        const flickers = Math.max(
+            1,
+            Math.round(maxFlickers / 2) +
+                Math.floor(Math.random() * (maxFlickers / 2 + 1))
+        )
+        let delay = 0
+        for (let i = 0; i < flickers; i++) {
+            const onAt = delay + Math.floor(15 + Math.random() * 50)
+            const offAt = onAt + Math.floor(25 + Math.random() * 55)
+            hoverFlickerTimersRef.current.push(
+                setTimeout(
+                    () =>
+                        setHoverFlickerSet((p) => {
+                            const s = new Set(p)
+                            s.add(id)
+                            return s
+                        }),
+                    onAt
+                )
+            )
+            hoverFlickerTimersRef.current.push(
+                setTimeout(
+                    () =>
+                        setHoverFlickerSet((p) => {
+                            const s = new Set(p)
+                            s.delete(id)
+                            return s
+                        }),
+                    offAt
+                )
+            )
+            delay = offAt
+        }
+    }
+
+    const applyDiffusion = () => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+        clearFlickerTimers()
+        const newDisplays = buildHoverDisplays(hoverRadiusRef.current)
+        setHoverDisplays(newDisplays)
+        setHoverFlickerSet(new Set())
+        if (hoverFlickerEnabledRef.current) {
+            const intensity = Math.max(
+                0,
+                Math.min(100, hoverFlickerIntensityRef.current)
+            )
+            if (intensity > 0) {
+                Object.keys(newDisplays).forEach((id) => {
+                    if (Math.random() > intensity / 100) return
+                    hoverFlickerTimersRef.current.push(
+                        setTimeout(
+                            () => flickerChar(id),
+                            Math.floor(Math.random() * 60)
+                        )
+                    )
+                })
+            }
+        }
+        if (hoverCollapseRef.current) {
+            let r = hoverRadiusRef.current
+            const stepMs =
+                (hoverCollapseTimeRef.current * 1000) / Math.max(1, r)
+            const collapseStep = () => {
+                r--
+                setHoverDisplays(buildHoverDisplays(r))
+                if (r > 0) {
+                    hoverTimerRef.current = setTimeout(collapseStep, stepMs)
+                } else {
+                    setHoverDisplays({})
+                    setHoverFlickerSet(new Set())
+                    clearFlickerTimers()
+                    hoverRandomCharsRef.current = {}
+                    lastMidIdRef.current = ""
+                }
+            }
+            hoverTimerRef.current = setTimeout(collapseStep, stepMs)
+        }
+    }
+
+    // ── Wave helpers ──────────────────────────────────────────────────────────
+
+    // Shared wave tick body used by both single-line and multi-line waves.
+    // Returns { toAdd, toRemove } for the given frontier state.
+    const buildWaveTick = (
+        orderedChars: CharInfo[],
+        fi: number,
+        glitchState: Record<string, string>,
+        GLITCH_RATE: number
+    ): { toAdd: Record<string, string>; toRemove: string[] } => {
+        const limitEnabled = waveShuffleLimitEnabledRef.current
+        const limitValue = waveShuffleLimitValueRef.current
+        const frontierIdx = Math.floor(fi)
+        const frac = fi - frontierIdx
+        const n = orderedChars.length
+
+        const rndGlitch = () =>
+            GLITCH_CHARS_UPPER[
+                Math.floor(Math.random() * GLITCH_CHARS_UPPER.length)
+            ]
+        const rndCursor = () =>
+            WAVE_CURSOR_CHARS[
+                Math.floor(Math.random() * WAVE_CURSOR_CHARS.length)
+            ]
+
+        const toAdd: Record<string, string> = {}
+        const toRemove: string[] = []
+
+        for (let i = 0; i < n; i++) {
+            const { id } = orderedChars[i]
+
+            if (i === frontierIdx) {
+                // Hard cursor: updates every frame for full-speed animation
+                glitchState[id] = rndCursor()
+                toAdd[id] = glitchState[id]
+            } else if (i === frontierIdx + 1 && i < n && Math.random() < frac) {
+                // Soft cursor bleed: leaks into next position with prob = frac
+                toAdd[id] = rndCursor()
+            } else if (i > fi) {
+                delete glitchState[id]
+                toRemove.push(id)
+            } else if (limitEnabled && fi - i > limitValue) {
+                delete glitchState[id]
+                toRemove.push(id)
+            } else {
+                if (!glitchState[id] || Math.random() < GLITCH_RATE) {
+                    glitchState[id] = rndGlitch()
+                }
+                toAdd[id] = glitchState[id]
+            }
+        }
+
+        return { toAdd, toRemove }
+    }
+
+    // ── Per-line wave: independent per-line waves, can run simultaneously ────────
+    // Each line manages its own rAF loop. A new wave on line L is only blocked
+    // if line L already has a wave in progress; other lines are unaffected.
+    const startLineWave = (lineTop: number, orderedChars: CharInfo[]) => {
+        // Cancel any stale wave on this specific line
+        if (lineWaveRafsRef.current.has(lineTop)) {
+            cancelAnimationFrame(lineWaveRafsRef.current.get(lineTop)!)
+            lineWaveRafsRef.current.delete(lineTop)
+        }
+        lineWavePlayingRef.current.add(lineTop)
+
+        const n = orderedChars.length
+        if (n === 0) {
+            lineWavePlayingRef.current.delete(lineTop)
+            return
+        }
+
+        const durMs = waveDurationRef.current * 1000
+        const limitEnabled = waveShuffleLimitEnabledRef.current
+        const limitValue = waveShuffleLimitValueRef.current
+        const totalSteps = limitEnabled ? n + limitValue : n
+        const GLITCH_RATE = 0.4
+        const glitchState: Record<string, string> = {}
+        const waveStart = performance.now()
+        const easeFn = makeEaseFn(waveEaseCurveRef.current)
+
+        const tick = () => {
+            // Stop if this line's wave was externally cancelled
+            if (!lineWavePlayingRef.current.has(lineTop)) return
+
+            const t = Math.min(1, (performance.now() - waveStart) / durMs)
+            const fi = easeFn(t) * totalSteps
+            const { toAdd, toRemove } = buildWaveTick(
+                orderedChars,
+                fi,
+                glitchState,
+                GLITCH_RATE
+            )
+
+            // Merge only this line's chars into the shared hoverDisplays
+            setHoverDisplays((prev) => {
+                const u = { ...prev }
+                toRemove.forEach((id) => delete u[id])
+                return Object.assign(u, toAdd)
+            })
+
+            if (fi < totalSteps) {
+                const rafId = requestAnimationFrame(tick)
+                lineWaveRafsRef.current.set(lineTop, rafId)
+            } else {
+                // This line's wave is done; remove it from playing set so it can re-trigger
+                lineWavePlayingRef.current.delete(lineTop)
+                lineWaveRafsRef.current.delete(lineTop)
+                setHoverDisplays((prev) => {
+                    const u = { ...prev }
+                    orderedChars.forEach(({ id }) => delete u[id])
+                    return u
+                })
+            }
+        }
+
+        const rafId = requestAnimationFrame(tick)
+        lineWaveRafsRef.current.set(lineTop, rafId)
+    }
+
+    // ── Mouse handlers ────────────────────────────────────────────────────────
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (hoverMode === "none") return
+        // waveMultiLine: block while any line wave is playing, and require
+        // mouse to leave and re-enter before re-triggering
+        if (
+            hoverMode === "waveMultiLine" &&
+            (lineWavePlayingRef.current.size > 0 ||
+                multiWaveTriggeredRef.current)
+        )
+            return
+
+        const chars: CharInfo[] = []
+        for (const [id, el] of Object.entries(charRefs.current)) {
+            if (!el) continue
+            const rect = el.getBoundingClientRect()
+            if (rect.width === 0 && rect.height === 0) continue
+            chars.push({
+                id,
+                cx: rect.left + rect.width / 2,
+                lineTop: Math.round(rect.top),
+            })
+        }
+        if (chars.length === 0) return
+
+        const lineTopValues = [...new Set(chars.map((c) => c.lineTop))].sort(
+            (a, b) => a - b
+        )
+        const lineMap = new Map<number, CharInfo[]>()
+        for (const lt of lineTopValues)
+            lineMap.set(
+                lt,
+                chars
+                    .filter((c) => c.lineTop === lt)
+                    .sort((a, b) => a.cx - b.cx)
+            )
+
+        const { clientX, clientY } = e
+
+        // Y-bounds check
+        let targetLineTop: number | null = null
+        for (const lt of lineTopValues) {
+            const lc = lineMap.get(lt)!
+            const sampleEl = charRefs.current[lc[0].id]
+            if (!sampleEl) continue
+            const rect = sampleEl.getBoundingClientRect()
+            if (clientY >= rect.top && clientY <= rect.bottom) {
+                targetLineTop = lt
+                break
+            }
+        }
+
+        // ── waveOneLine: per-line independent waves ────────────────────────────
+        if (hoverMode === "waveOneLine") {
+            // Reset the gate for the previous line when cursor moves off it
+            if (
+                lastOneWaveLineRef.current !== null &&
+                lastOneWaveLineRef.current !== targetLineTop
+            ) {
+                oneWaveTriggeredLinesRef.current.delete(
+                    lastOneWaveLineRef.current
+                )
+            }
+            lastOneWaveLineRef.current = targetLineTop
+            if (targetLineTop === null) return
+            // Block if this line already has a wave playing
+            if (lineWavePlayingRef.current.has(targetLineTop)) return
+            // Block if this line has already triggered during current hover
+            if (oneWaveTriggeredLinesRef.current.has(targetLineTop)) return
+            oneWaveTriggeredLinesRef.current.add(targetLineTop)
+            const lineChars = (lineMap.get(targetLineTop) ?? [])
+                .slice()
+                .sort((a, b) => a.cx - b.cx)
+            startLineWave(targetLineTop, lineChars)
+            return
+        }
+
+        // ── waveMultiLine: parallel per-line waves, all lines start together ──
+        if (hoverMode === "waveMultiLine") {
+            if (targetLineTop === null) return
+            multiWaveTriggeredRef.current = true
+            for (const lt of lineTopValues) {
+                const lineChars = (lineMap.get(lt) ?? [])
+                    .slice()
+                    .sort((a, b) => a.cx - b.cx)
+                startLineWave(lt, lineChars)
+            }
+            return
+        }
+
+        // ── Diffusion ─────────────────────────────────────────────────────────
+        if (targetLineTop === null) {
+            if (lastMidIdRef.current !== "") clearHoverState()
+            return
+        }
+
+        const closestLineChars = lineMap.get(targetLineTop)!
+        const closestLineIdx = lineTopValues.indexOf(targetLineTop)
+        let midIdx = 0,
+            minXDist = Infinity
+        closestLineChars.forEach((c, i) => {
+            const d = Math.abs(c.cx - clientX)
+            if (d < minXDist) {
+                minXDist = d
+                midIdx = i
+            }
+        })
+        const midId = closestLineChars[midIdx].id
+        if (midId === lastMidIdRef.current) return
+        lastMidIdRef.current = midId
+        hoverRandomCharsRef.current = {}
+
+        hoverSceneRef.current = {
+            lineMap,
+            lineTopValues,
+            closestLineIdx,
+            midCx: closestLineChars[midIdx].cx,
+            closestLineTop: targetLineTop,
+        }
+        applyDiffusion()
+    }
+
+    const handleMouseLeave = () => {
+        // Reset all wave trigger gates so next entry can fire again
+        multiWaveTriggeredRef.current = false
+        oneWaveTriggeredLinesRef.current.clear()
+        lastOneWaveLineRef.current = null
+        // Let any in-progress waves complete naturally
+        if (
+            (hoverMode === "waveMultiLine" || hoverMode === "waveOneLine") &&
+            lineWavePlayingRef.current.size > 0
+        )
+            return
+        clearHoverState()
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    const isInsertEnter = enterMode === "oneLine" || enterMode === "multiLine"
+
+    return (
+        <div
+            ref={containerRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                width: "100%",
+                height: "100%",
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: "0.1em",
+                background: "transparent",
+                overflow: "hidden",
+            }}
+        >
+            {paragraphs.map((_, pi) => {
+                const paraEntries = allWords.filter((w) => w.pi === pi)
+                return (
+                    <Tag
+                        key={pi}
+                        onMouseLeave={() => {
+                            multiWaveTriggeredRef.current = false
+                        }}
+                        style={{
+                            position: "relative",
+                            width: "100%",
+                            margin: 0,
+                            padding: 0,
+                            fontWeight: "inherit",
+                            fontSize: "inherit",
+                            lineHeight: "inherit",
+                        }}
+                    >
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                visibility: "hidden",
+                                pointerEvents: "none",
+                                textAlign: textAlign as any,
+                            }}
+                        >
+                            {paraEntries.map((wordEntry, i) => (
+                                <Fragment key={wordEntry.globalWi}>
+                                    {i > 0 && (
+                                        <span
+                                            style={{
+                                                ...spanStyle,
+                                                letterSpacing: "0.05em",
+                                            }}
+                                        >
+                                            {" "}
+                                        </span>
+                                    )}
+                                    <span
+                                        ref={(el) => {
+                                            ghostRefs.current[
+                                                wordEntry.globalWi
+                                            ] = el
+                                        }}
+                                        style={{
+                                            ...spanStyle,
+                                            letterSpacing: "0.05em",
+                                            display: "inline-block",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {wordEntry.text}
+                                    </span>
+                                </Fragment>
+                            ))}
+                        </div>
+
+                        <div
+                            style={{
+                                width: "100%",
+                                textAlign: textAlign as any,
+                            }}
+                        >
+                            {paraEntries.map((wordEntry, i) => {
+                                // oneLine / multiLine: ALWAYS use the word-level anchor container
+                                // so the word width never changes between animation and hover states.
+                                // Switching to per-char slots causes a 1×letterSpacing expansion
+                                // because inline-block + letterSpacing adds trailing space on every
+                                // character including the last, unlike a single text run.
+                                if (isInsertEnter) {
+                                    const placed =
+                                        placedChars[wordEntry.globalWi] ?? []
+                                    return (
+                                        <Fragment key={wordEntry.globalWi}>
+                                            {i > 0 && (
+                                                <span
+                                                    style={{
+                                                        ...spanStyle,
+                                                        letterSpacing: "0.05em",
+                                                    }}
+                                                >
+                                                    {" "}
+                                                </span>
+                                            )}
+                                            <span
+                                                style={{
+                                                    display: "inline-block",
+                                                    whiteSpace: "nowrap",
+                                                    position: "relative",
+                                                }}
+                                            >
+                                                {/* Width anchor: constant before, during and after animation */}
+                                                <span
+                                                    style={{
+                                                        ...spanStyle,
+                                                        letterSpacing: "0.05em",
+                                                        visibility: "hidden",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {wordEntry.text}
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        position: "absolute",
+                                                        inset: 0,
+                                                        overflow: "hidden",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {!enterAnimComplete &&
+                                                    !(
+                                                        !shouldAnimate &&
+                                                        enterRestState ===
+                                                            "solid"
+                                                    )
+                                                        ? // ── During animation: placed chars only ──────────────────
+                                                          placed.map((ci) => {
+                                                              const char =
+                                                                  wordEntry
+                                                                      .text[ci]
+                                                              const id = `${wordEntry.globalWi}-${ci}`
+                                                              const state =
+                                                                  displays[id]
+                                                              const displayColor =
+                                                                  state
+                                                                      ? state.flickering
+                                                                          ? enterFlickerEnabled
+                                                                              ? enterFlickerColor
+                                                                              : color
+                                                                          : state.locked
+                                                                            ? color
+                                                                            : glitchColor
+                                                                      : "transparent"
+                                                              return (
+                                                                  <span
+                                                                      key={ci}
+                                                                      style={{
+                                                                          ...spanStyle,
+                                                                          letterSpacing:
+                                                                              "0.05em",
+                                                                          color: displayColor,
+                                                                      }}
+                                                                  >
+                                                                      {state?.char ??
+                                                                          char}
+                                                                  </span>
+                                                              )
+                                                          })
+                                                        : // ── Post-animation: all chars with charRefs for hover ────
+                                                          // Same natural text flow → no width change on transition.
+                                                          wordEntry.text
+                                                              .split("")
+                                                              .map(
+                                                                  (
+                                                                      char,
+                                                                      ci
+                                                                  ) => {
+                                                                      const id = `${wordEntry.globalWi}-${ci}`
+                                                                      const hoverChar =
+                                                                          hoverDisplays[
+                                                                              id
+                                                                          ]
+                                                                      const isHF =
+                                                                          hoverFlickerSet.has(
+                                                                              id
+                                                                          )
+                                                                      let displayChar =
+                                                                              char,
+                                                                          charColor =
+                                                                              color
+                                                                      if (
+                                                                          hoverChar !==
+                                                                          undefined
+                                                                      ) {
+                                                                          displayChar =
+                                                                              hoverChar
+                                                                          charColor =
+                                                                              isHF &&
+                                                                              hoverFlickerEnabled
+                                                                                  ? hoverFlickerColor
+                                                                                  : glitchColor
+                                                                      } else if (
+                                                                          isHF &&
+                                                                          hoverFlickerEnabled
+                                                                      ) {
+                                                                          charColor =
+                                                                              hoverFlickerColor
+                                                                      }
+                                                                      return (
+                                                                          <span
+                                                                              key={
+                                                                                  ci
+                                                                              }
+                                                                              ref={(
+                                                                                  el
+                                                                              ) => {
+                                                                                  charRefs.current[
+                                                                                      id
+                                                                                  ] =
+                                                                                      el
+                                                                              }}
+                                                                              style={{
+                                                                                  ...spanStyle,
+                                                                                  letterSpacing:
+                                                                                      "0.05em",
+                                                                                  color: charColor,
+                                                                              }}
+                                                                          >
+                                                                              {
+                                                                                  displayChar
+                                                                              }
+                                                                          </span>
+                                                                      )
+                                                                  }
+                                                              )}
+                                                </span>
+                                            </span>
+                                        </Fragment>
+                                    )
+                                }
+
+                                // ── All other modes: word-level container, per-char refs ──────────
+                                // Uses the SAME word-level anchor as oneLine/multiLine so word width
+                                // is identical across enter random, no-enter, and both hover modes.
+                                // Per-char inline-block slots add 1×letterSpacing extra width each;
+                                // a single text run anchor avoids that entirely.
+                                return (
+                                    <Fragment key={wordEntry.globalWi}>
+                                        {i > 0 && (
+                                            <span
+                                                style={{
+                                                    ...spanStyle,
+                                                    letterSpacing: "0.05em",
+                                                    color,
+                                                }}
+                                            >
+                                                {" "}
+                                            </span>
+                                        )}
+                                        <span
+                                            style={{
+                                                display: "inline-block",
+                                                whiteSpace: "nowrap",
+                                                position: "relative",
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    ...spanStyle,
+                                                    letterSpacing: "0.05em",
+                                                    visibility: "hidden",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {wordEntry.text}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    position: "absolute",
+                                                    inset: 0,
+                                                    overflow: "hidden",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {wordEntry.text
+                                                    .split("")
+                                                    .map((char, ci) => {
+                                                        const id = `${wordEntry.globalWi}-${ci}`
+                                                        const hoverChar =
+                                                            hoverDisplays[id]
+                                                        const enterState =
+                                                            displays[id]
+                                                        const isHF =
+                                                            hoverFlickerSet.has(
+                                                                id
+                                                            )
+
+                                                        let displayChar = char,
+                                                            charColor = color
+
+                                                        if (
+                                                            hoverChar !==
+                                                            undefined
+                                                        ) {
+                                                            displayChar =
+                                                                hoverChar
+                                                            charColor =
+                                                                isHF &&
+                                                                hoverFlickerEnabled
+                                                                    ? hoverFlickerColor
+                                                                    : glitchColor
+                                                        } else if (
+                                                            isHF &&
+                                                            hoverFlickerEnabled
+                                                        ) {
+                                                            charColor =
+                                                                hoverFlickerColor
+                                                        } else if (
+                                                            enterMode !== "none"
+                                                        ) {
+                                                            if (!enterState) {
+                                                                charColor =
+                                                                    !shouldAnimate &&
+                                                                    enterRestState ===
+                                                                        "solid"
+                                                                        ? color
+                                                                        : "transparent"
+                                                            } else {
+                                                                displayChar =
+                                                                    enterState.char
+                                                                charColor =
+                                                                    enterState.flickering
+                                                                        ? enterFlickerEnabled
+                                                                            ? enterFlickerColor
+                                                                            : color
+                                                                        : enterState.locked
+                                                                          ? color
+                                                                          : glitchColor
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <span
+                                                                key={ci}
+                                                                ref={(el) => {
+                                                                    charRefs.current[
+                                                                        id
+                                                                    ] = el
+                                                                }}
+                                                                style={{
+                                                                    ...spanStyle,
+                                                                    letterSpacing:
+                                                                        "0.05em",
+                                                                    color: charColor,
+                                                                }}
+                                                            >
+                                                                {displayChar}
+                                                            </span>
+                                                        )
+                                                    })}
+                                            </span>
+                                        </span>
+                                    </Fragment>
+                                )
+                            })}
+                        </div>
+                    </Tag>
+                )
+            })}
+        </div>
+    )
+}
+
+addPropertyControls(GlitchCharReveal, {
+    words: {
+        title: "Words",
+        type: ControlType.String,
+        defaultValue: "DATA.\nDECIPHERED.\nDEPLOYED.",
+        displayTextArea: true,
+    },
+    enterAnimation: {
+        title: "Enter Animation",
+        type: ControlType.Object,
+        controls: {
+            mode: {
+                title: "Mode",
+                type: ControlType.Enum,
+                defaultValue: "oneLine",
+                options: ["none", "oneLine", "multiLine", "random"],
+                optionTitles: ["None", "One Line", "Multi Line", "Random"],
+                displaySegmentedControl: false,
+            },
+            restState: {
+                title: "Rest State",
+                type: ControlType.Enum,
+                defaultValue: "hidden",
+                options: ["hidden", "solid"],
+                optionTitles: ["Hidden", "Solid"],
+                displaySegmentedControl: true,
+                hidden: (props) => props.mode === "none",
+            },
+            replay: {
+                title: "Replay",
+                type: ControlType.Boolean,
+                defaultValue: false,
+                enabledTitle: "Yes",
+                disabledTitle: "No",
+                hidden: (props) => props.mode === "none",
+            },
+            position: {
+                title: "Position",
+                type: ControlType.Enum,
+                defaultValue: "above",
+                options: ["above", "middle", "below"],
+                optionTitles: ["Top", "Middle", "Bottom"],
+                optionIcons: [
+                    "text-align-top",
+                    "text-align-middle",
+                    "text-align-bottom",
+                ],
+                displaySegmentedControl: true,
+                hidden: (props) => props.mode === "none",
+            },
+            scrambleIntensity: {
+                title: "Scramble Intensity",
+                type: ControlType.Number,
+                defaultValue: 50,
+                min: 0,
+                max: 100,
+                step: 1,
+                unit: "%",
+                hidden: (props) => props.mode === "none",
+            },
+            ease: {
+                title: "Ease",
+                type: ControlType.Transition,
+                defaultValue: { type: "tween", duration: 2, ease: "easeOut" },
+                hidden: (props) => props.mode === "none",
+            },
+            flickerEnabled: {
+                title: "Flicker",
+                type: ControlType.Boolean,
+                defaultValue: false,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (props) => props.mode === "none",
+            },
+            flickerColor: {
+                title: "Flicker Color",
+                type: ControlType.Color,
+                defaultValue: "#ff4400",
+                hidden: (props) =>
+                    props.mode === "none" || !props.flickerEnabled,
+            },
+            flickerIntensity: {
+                title: "Flicker Intensity",
+                type: ControlType.Number,
+                defaultValue: 50,
+                min: 0,
+                max: 100,
+                step: 1,
+                unit: "%",
+                hidden: (props) =>
+                    props.mode === "none" || !props.flickerEnabled,
+            },
+        },
+    },
+    hoverAnimation: {
+        title: "Hover Animation",
+        type: ControlType.Object,
+        controls: {
+            type: {
+                title: "Mode",
+                type: ControlType.Enum,
+                defaultValue: "none",
+                options: ["none", "diffusion", "wave"],
+                optionTitles: ["None", "Diffusion", "Wave"],
+                displaySegmentedControl: false,
+            },
+            lines: {
+                title: "Lines",
+                type: ControlType.Enum,
+                defaultValue: "oneLine",
+                options: ["oneLine", "multiLine"],
+                optionTitles: ["Single", "Multiple"],
+                displaySegmentedControl: true,
+                hidden: (props) => props.type === "none",
+            },
+
+            // ── Diffusion ──────────────────────────────────────────────────────
+            radius: {
+                title: "Radius",
+                type: ControlType.Number,
+                defaultValue: 5,
+                min: 1,
+                max: 50,
+                step: 1,
+                displayStepper: true,
+                unit: "ch",
+                hidden: (props) => props.type !== "diffusion",
+            },
+            collapse: {
+                title: "Collapse",
+                type: ControlType.Boolean,
+                defaultValue: false,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (props) => props.type !== "diffusion",
+            },
+            collapseTime: {
+                title: "Collapse Time",
+                type: ControlType.Number,
+                defaultValue: 1,
+                min: 0.5,
+                max: 15,
+                step: 0.1,
+                displayStepper: true,
+                unit: "s",
+                hidden: (props) =>
+                    props.type !== "diffusion" || !props.collapse,
+            },
+            glitchChars: {
+                title: "Glitch Chars",
+                type: ControlType.String,
+                defaultValue: "01",
+                placeholder: "Characters to show on hover",
+                hidden: (props) => props.type !== "diffusion",
+            },
+            glitchShuffle: {
+                title: "Shuffle",
+                type: ControlType.Boolean,
+                defaultValue: true,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (props) => props.type !== "diffusion",
+            },
+            flickerEnabled: {
+                title: "Flicker",
+                type: ControlType.Boolean,
+                defaultValue: false,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (props) => props.type !== "diffusion",
+            },
+            flickerColor: {
+                title: "Flicker Color",
+                type: ControlType.Color,
+                defaultValue: "#ff4400",
+                hidden: (props) =>
+                    props.type !== "diffusion" || !props.flickerEnabled,
+            },
+            flickerIntensity: {
+                title: "Flicker Intensity",
+                type: ControlType.Number,
+                defaultValue: 50,
+                min: 0,
+                max: 100,
+                step: 1,
+                unit: "%",
+                hidden: (props) =>
+                    props.type !== "diffusion" || !props.flickerEnabled,
+            },
+
+            // ── Wave ──────────────────────────────────────────────────────────
+            waveEase: {
+                title: "Ease",
+                type: ControlType.Transition,
+                defaultValue: { type: "tween", duration: 1.5, ease: "linear" },
+                hidden: (props) => props.type !== "wave",
+            },
+            waveShuffleLimitEnabled: {
+                title: "Shuffle Limit",
+                type: ControlType.Boolean,
+                defaultValue: false,
+                enabledTitle: "On",
+                disabledTitle: "Off",
+                hidden: (props) => props.type !== "wave",
+            },
+            waveShuffleLimitValue: {
+                title: "Limit",
+                type: ControlType.Number,
+                defaultValue: 10,
+                min: 1,
+                max: 100,
+                step: 1,
+                displayStepper: true,
+                unit: "ch",
+                hidden: (props) =>
+                    props.type !== "wave" || !props.waveShuffleLimitEnabled,
+            },
+        },
+    },
+    color: {
+        title: "Text Color",
+        type: ControlType.Color,
+        defaultValue: "#ffffff",
+    },
+    font: {
+        type: ControlType.Font,
+        title: "Font",
+        defaultValue: {
+            variant: "Bold",
+            letterSpacing: "0.05em",
+            lineHeight: "1em",
+        },
+        controls: "extended",
+        defaultFontType: "sans-serif",
+    },
+    tag: {
+        title: "Tag",
+        type: ControlType.Enum,
+        defaultValue: "p",
+        options: ["h1", "h2", "h3", "h4", "h5", "h6", "p"],
+        optionTitles: ["h1", "h2", "h3", "h4", "h5", "h6", "p"],
+        displaySegmentedControl: false,
+    },
+})

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.framer.com)",
+      "WebSearch",
+      "WebFetch(domain:www.framer.community)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
