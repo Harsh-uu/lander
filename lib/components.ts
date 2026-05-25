@@ -22,7 +22,7 @@ export const componentRegistry = {
         name: "Image Gallery",
         Component: ImageGallery,
         framerUrl:
-            "https://framer.com/m/ImageGallery-3YC6Rw.js@FYfO00JRiqAinPcYUgHE",
+            "https://framer.com/m/ImageGallery-3YC6Rw.js@joD3UXGM4SwfM05uPlEd",
         defaultProps: {},
     },
     
@@ -30,7 +30,7 @@ export const componentRegistry = {
         name: "Scramble Text",
         Component: ScrambleText,
         framerUrl:
-            "https://framer.com/m/GlitchReveal-yJrAov.js@CkEMHytnATaA1moXFnZf",
+            "https://framer.com/m/ScrambleText-v9xmyx.js@VufUjyCldxjC78r5wQq2",
         defaultProps: {
             words: "Scramble\nText",
             tag: "h1",
@@ -39,10 +39,10 @@ export const componentRegistry = {
         },
     },
     "svg-particles": {
-        name: "SVG Particles",
+        name: "Image Particles",
         Component: SVGParticles,
         framerUrl:
-            "https://framer.com/m/SvgMapper-Xp5dP5.js@HrY2NkfEbXlV1CFS0FeH",
+            "https://framer.com/m/ImageParticles-VqA663.js@3lmd95whAQOnZlL0ASSG",
         defaultProps: {},
     },
 } as const

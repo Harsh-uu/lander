@@ -78,10 +78,10 @@ type WordEntry = {
 type CharInfo = { id: string; cx: number; lineTop: number }
 
 /**
- * @framerSupportedLayoutWidth any
- * @framerSupportedLayoutHeight any
- * @framerIntrinsicWidth 200
- * @framerIntrinsicHeight 200
+ * @framerSupportedLayoutWidth fixed
+ * @framerSupportedLayoutHeight fixed
+ * @framerIntrinsicWidth 1020
+ * @framerIntrinsicHeight 240
  */
 export default function GlitchCharReveal(props: any) {
     const { words, enterAnimation, hoverAnimation, color, font, tag } = props
@@ -1448,7 +1448,8 @@ addPropertyControls(GlitchCharReveal, {
     words: {
         title: "Words",
         type: ControlType.String,
-        defaultValue: "DATA.\nDECIPHERED.\nDEPLOYED.",
+        defaultValue:
+            "Crafted by Lander Studio to help founders ship faster with premium-quality Framer experiences.\nBuilt with scalability, motion, and conversion in mind.",
         displayTextArea: true,
     },
     enterAnimation: {
@@ -1458,7 +1459,7 @@ addPropertyControls(GlitchCharReveal, {
             mode: {
                 title: "Mode",
                 type: ControlType.Enum,
-                defaultValue: "oneLine",
+                defaultValue: "multiLine",
                 options: ["none", "oneLine", "multiLine", "random"],
                 optionTitles: ["None", "One Line", "Multi Line", "Random"],
                 displaySegmentedControl: false,
@@ -1475,7 +1476,7 @@ addPropertyControls(GlitchCharReveal, {
             replay: {
                 title: "Replay",
                 type: ControlType.Boolean,
-                defaultValue: false,
+                defaultValue: true,
                 enabledTitle: "Yes",
                 disabledTitle: "No",
                 hidden: (props) => props.mode === "none",
@@ -1497,7 +1498,7 @@ addPropertyControls(GlitchCharReveal, {
             scrambleIntensity: {
                 title: "Scramble Intensity",
                 type: ControlType.Number,
-                defaultValue: 50,
+                defaultValue: 100,
                 min: 0,
                 max: 100,
                 step: 1,
@@ -1507,13 +1508,13 @@ addPropertyControls(GlitchCharReveal, {
             ease: {
                 title: "Ease",
                 type: ControlType.Transition,
-                defaultValue: { type: "tween", duration: 2, ease: "easeOut" },
+                defaultValue: { type: "tween", duration: 2, ease: "linear" },
                 hidden: (props) => props.mode === "none",
             },
             flickerEnabled: {
                 title: "Flicker",
                 type: ControlType.Boolean,
-                defaultValue: false,
+                defaultValue: true,
                 enabledTitle: "On",
                 disabledTitle: "Off",
                 hidden: (props) => props.mode === "none",
@@ -1521,14 +1522,14 @@ addPropertyControls(GlitchCharReveal, {
             flickerColor: {
                 title: "Flicker Color",
                 type: ControlType.Color,
-                defaultValue: "#ff4400",
+                defaultValue: "#333333",
                 hidden: (props) =>
                     props.mode === "none" || !props.flickerEnabled,
             },
             flickerIntensity: {
                 title: "Flicker Intensity",
                 type: ControlType.Number,
-                defaultValue: 50,
+                defaultValue: 84,
                 min: 0,
                 max: 100,
                 step: 1,
@@ -1555,7 +1556,7 @@ addPropertyControls(GlitchCharReveal, {
             type: {
                 title: "Mode",
                 type: ControlType.Enum,
-                defaultValue: "none",
+                defaultValue: "diffusion",
                 options: ["none", "diffusion", "wave"],
                 optionTitles: ["None", "Diffusion", "Wave"],
                 displaySegmentedControl: false,
@@ -1692,10 +1693,12 @@ addPropertyControls(GlitchCharReveal, {
         type: ControlType.Font,
         title: "Font",
         defaultValue: {
+            fontFamily: "Inter",
             variant: "Bold",
-            letterSpacing: "0.05em",
+            fontSize: 35,
             lineHeight: "1em",
-        },
+            letterSpacing: "0.05em",
+        } as any,
         controls: "extended",
         defaultFontType: "sans-serif",
     },

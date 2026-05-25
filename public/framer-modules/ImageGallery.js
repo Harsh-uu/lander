@@ -108,7 +108,7 @@ function ImageGallery(props) {
   const activeCountRef = useRef(0);
   const recentImgsRef = useRef([]);
   const imagePoolRef = useRef([]);
-  const backgroundRef = useRef(background != null ? background : "#0c0c0c");
+  const backgroundRef = useRef(background != null ? background : "#000000");
   const imageScaleRef = useRef(imageScale != null ? imageScale : 5);
   const blankAreaRef = useRef(blankArea != null ? blankArea : 1);
   const crowdDensityRef = useRef(crowdDensity != null ? crowdDensity : 10);
@@ -124,7 +124,7 @@ function ImageGallery(props) {
       ease: { duration: 0.67, ease: "easeIn" }
     }
   );
-  backgroundRef.current = background != null ? background : "#0c0c0c";
+  backgroundRef.current = background != null ? background : "#000000";
   imageScaleRef.current = imageScale != null ? imageScale : 5;
   blankAreaRef.current = blankArea != null ? blankArea : 1;
   crowdDensityRef.current = crowdDensity != null ? crowdDensity : 10;
@@ -139,7 +139,21 @@ function ImageGallery(props) {
     style: "inToOut",
     ease: { duration: 0.67, ease: "easeIn" }
   };
-  const userUrls = Array.isArray(images) ? images.map(extractUrl).filter(Boolean) : [];
+  const FALLBACK_IMAGES = [
+    // Digital / abstract art
+    "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
+    "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80",
+    // Indian designs / textile
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80",
+    "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80",
+    // Drawing / sketch
+    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+    "https://images.unsplash.com/photo-1502945015378-0e284ca1a5be?w=600&q=80",
+    // Color / paint
+    "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80"
+  ];
+  const userInput = Array.isArray(images) ? images.map(extractUrl).filter(Boolean) : [];
+  const userUrls = userInput.length > 0 ? userInput : FALLBACK_IMAGES;
   imagePoolRef.current = userUrls;
   function getUniqueImage() {
     const pool = imagePoolRef.current;
@@ -218,10 +232,7 @@ function ImageGallery(props) {
         const s3 = rand(3, 4.5);
         const centerX = containerW / 2;
         const centerY = containerH / 2;
-        const zoneAngle = Math.atan2(
-          zone.cy - 50,
-          zone.cx - 50
-        );
+        const zoneAngle = Math.atan2(zone.cy - 50, zone.cx - 50);
         const angleJitter = rand(-0.25, 0.25);
         const angle = zoneAngle + angleJitter + rand(-0.3, 0.3);
         const isSpiralModeForSpawn = typeRef.current === "spiral";
@@ -289,9 +300,7 @@ function ImageGallery(props) {
           };
           const isSpiral = typeRef.current === "spiral";
           if (isSpiral) {
-            const path = SPIRAL_PATHS[Math.floor(
-              Math.random() * SPIRAL_PATHS.length
-            )];
+            const path = SPIRAL_PATHS[Math.floor(Math.random() * SPIRAL_PATHS.length)];
             const R = Math.hypot(containerW / 2, containerH / 2) * 1.1;
             const startA = path.startAngle;
             const dirSetting = dirRef.current;
@@ -341,10 +350,7 @@ function ImageGallery(props) {
                   op = 1;
                 } else {
                   const since = realT - driftEnd;
-                  op = fadeDur > 0 ? Math.max(
-                    0,
-                    1 - since / fadeDur
-                  ) : 0;
+                  op = fadeDur > 0 ? Math.max(0, 1 - since / fadeDur) : 0;
                 }
                 const [x, y] = pathPos(u);
                 gsap.set(el, {
@@ -470,10 +476,7 @@ function ImageGallery(props) {
       timerRef.current = setInterval(() => {
         var _a, _b, _c, _d, _e, _f, _g, _h, _i;
         if (pausedRef.current) return;
-        const target = Math.max(
-          1,
-          Math.round(crowdDensityRef.current)
-        );
+        const target = Math.max(1, Math.round(crowdDensityRef.current));
         const delaySec = Math.max(0, crowdDelayRef.current);
         const now = performance.now();
         if (delaySec === 0) {
@@ -481,10 +484,7 @@ function ImageGallery(props) {
           const holdDur = (_f = (_e = (_d = appearRef.current) == null ? void 0 : _d.ease) == null ? void 0 : _e.delay) != null ? _f : 0;
           const zoopDur = (_i = (_h = (_g = disappearRef.current) == null ? void 0 : _g.ease) == null ? void 0 : _h.duration) != null ? _i : 0.67;
           const lifetimeMs = (entryDur + holdDur + zoopDur) * 1e3;
-          const spawnInterval = Math.max(
-            20,
-            lifetimeMs / target
-          );
+          const spawnInterval = Math.max(20, lifetimeMs / target);
           if (now - lastSpawn >= spawnInterval) {
             spawnTile();
             lastSpawn = now;
@@ -551,7 +551,7 @@ function ImageGallery(props) {
         position: "relative",
         width: "100%",
         height: "100%",
-        background: background != null ? background : "#0c0c0c",
+        background: background != null ? background : "#000000",
         overflow: "hidden"
       },
       children: /* @__PURE__ */ jsx(
@@ -574,7 +574,30 @@ addPropertyControls(ImageGallery, {
   images: {
     title: "Images",
     type: ControlType.Array,
-    propertyControl: { type: ControlType.ResponsiveImage }
+    control: { type: ControlType.ResponsiveImage },
+    defaultValue: [
+      {
+        src: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1502945015378-0e284ca1a5be?w=600&q=80"
+      },
+      {
+        src: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80"
+      }
+    ]
   },
   type: {
     title: "Type",
@@ -607,7 +630,12 @@ addPropertyControls(ImageGallery, {
       ease: {
         title: "Ease",
         type: ControlType.Transition,
-        defaultValue: { type: "tween", duration: 0.5, ease: "easeOut" }
+        defaultValue: {
+          type: "tween",
+          duration: 2,
+          delay: 2,
+          ease: "linear"
+        }
       }
     }
   },
@@ -625,7 +653,7 @@ addPropertyControls(ImageGallery, {
       ease: {
         title: "Ease",
         type: ControlType.Transition,
-        defaultValue: { type: "tween", duration: 0.67, ease: "easeIn" }
+        defaultValue: { type: "tween", duration: 1, ease: "linear" }
       },
       fadeOut: {
         title: "Fade Out",
@@ -643,7 +671,7 @@ addPropertyControls(ImageGallery, {
   blankArea: {
     title: "Blank Area",
     type: ControlType.Number,
-    defaultValue: 1,
+    defaultValue: 5,
     min: 0,
     max: 100,
     step: 1,
@@ -652,7 +680,7 @@ addPropertyControls(ImageGallery, {
   imageScale: {
     title: "Image Scale",
     type: ControlType.Number,
-    defaultValue: 5,
+    defaultValue: 2,
     min: 1,
     max: 20,
     step: 1
@@ -677,7 +705,7 @@ addPropertyControls(ImageGallery, {
   background: {
     title: "Background",
     type: ControlType.Color,
-    defaultValue: "#0c0c0c"
+    defaultValue: "#000000"
   }
 });
 export {

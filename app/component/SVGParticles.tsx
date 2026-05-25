@@ -175,8 +175,10 @@ export default function ParticleImage({
         repulsionRadius = 80,
         repulsionMode = "outside",
     } = repulsionConfig || {}
+    const DEFAULT_IMAGE =
+        "https://res.cloudinary.com/dhwanyldj/image/upload/v1779715775/Lander_Logo_500_ej78sa.png"
     const {
-        image,
+        image: rawImage,
         mode = "fill",
         sizeUnit = "%",
         widthPx = 400,
@@ -185,6 +187,7 @@ export default function ParticleImage({
         heightPct = 100,
         scale = 10,
     } = (imageConfig as any) || {}
+    const image = rawImage || DEFAULT_IMAGE
     const containerRef = useRef(null)
     const canvasRef = useRef(null)
     const mouseRef = useRef({ x: -99999, y: -99999, active: false })
@@ -836,13 +839,13 @@ export default function ParticleImage({
 }
 ParticleImage.defaultProps = {
     imageConfig: undefined,
-    particleCount: 10,
+    particleCount: 20,
     particleSize: 5,
     particleShape: "square",
     particleColor: "original",
     singleColor: "#ffffff",
     multiColors: ["#ffffff", "#aaaaaa", "#555555"],
-    hoverEnabled: true,
+    hoverEnabled: false,
     hoverConfig: {
         hoverType: "roam",
         transition: { duration: 0.8, ease: "easeOut" },
@@ -864,11 +867,16 @@ addPropertyControls(ParticleImage, {
         type: ControlType.Object,
         title: "Image",
         controls: {
-            image: { type: ControlType.Image, title: "Image" },
+            image: {
+                type: ControlType.Image,
+                title: "Image",
+                defaultValue:
+                    "https://res.cloudinary.com/dhwanyldj/image/upload/v1779715775/Lander_Logo_500_ej78sa.png",
+            },
             mode: {
                 type: ControlType.Enum,
                 title: "Mode",
-                defaultValue: "fill",
+                defaultValue: "fit",
                 options: ["fill", "fit"],
                 optionTitles: ["Fill", "Fit"],
                 displaySegmentedControl: true,
@@ -929,7 +937,7 @@ addPropertyControls(ParticleImage, {
             scale: {
                 type: ControlType.Number,
                 title: "Scale",
-                defaultValue: 10,
+                defaultValue: 20,
                 min: 1,
                 max: 20,
                 step: 1,
@@ -970,7 +978,7 @@ addPropertyControls(ParticleImage, {
     particleCount: {
         type: ControlType.Number,
         title: "Particle Count",
-        defaultValue: 10,
+        defaultValue: 20,
         min: 1,
         max: 50,
         step: 1,
@@ -986,7 +994,7 @@ addPropertyControls(ParticleImage, {
     hoverEnabled: {
         type: ControlType.Boolean,
         title: "Hover Effects",
-        defaultValue: true,
+        defaultValue: false,
         enabledTitle: "On",
         disabledTitle: "Off",
     },

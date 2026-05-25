@@ -560,7 +560,7 @@ var textFlickerControls = {
   ease: {
     title: "Ease",
     type: ControlType.Transition,
-    defaultValue: { type: "tween", duration: 5, ease: "linear" }
+    defaultValue: { type: "tween", duration: 2, ease: "linear" }
   },
   flickerCount: {
     title: "Flicker Count",

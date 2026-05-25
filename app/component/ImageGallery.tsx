@@ -102,8 +102,8 @@ function extractUrl(item) {
 /**
  * @framerSupportedLayoutWidth fixed
  * @framerSupportedLayoutHeight fixed
- * @framerIntrinsicWidth 200
- * @framerIntrinsicHeight 200
+ * @framerIntrinsicWidth 1080
+ * @framerIntrinsicHeight 480
  */
 export default function ImageGallery(props) {
     const {
@@ -129,7 +129,7 @@ export default function ImageGallery(props) {
     const activeCountRef = useRef(0)
     const recentImgsRef = useRef([])
     const imagePoolRef = useRef([])
-    const backgroundRef = useRef(background ?? "#0c0c0c")
+    const backgroundRef = useRef(background ?? "#000000")
     const imageScaleRef = useRef(imageScale ?? 5)
     const blankAreaRef = useRef(blankArea ?? 1)
     const crowdDensityRef = useRef(crowdDensity ?? 10)
@@ -145,7 +145,7 @@ export default function ImageGallery(props) {
             ease: { duration: 0.67, ease: "easeIn" },
         }
     )
-    backgroundRef.current = background ?? "#0c0c0c"
+    backgroundRef.current = background ?? "#000000"
     imageScaleRef.current = imageScale ?? 5
     blankAreaRef.current = blankArea ?? 1
     crowdDensityRef.current = crowdDensity ?? 10
@@ -161,9 +161,23 @@ export default function ImageGallery(props) {
         ease: { duration: 0.67, ease: "easeIn" },
     }
 
-    const userUrls = Array.isArray(images)
+    const FALLBACK_IMAGES = [
+        // Digital / abstract art
+        "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
+        "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80",
+        // Indian designs / textile
+        "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80",
+        "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80",
+        // Drawing / sketch
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+        "https://images.unsplash.com/photo-1502945015378-0e284ca1a5be?w=600&q=80",
+        // Color / paint
+        "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80",
+    ]
+    const userInput = Array.isArray(images)
         ? images.map(extractUrl).filter(Boolean)
         : []
+    const userUrls = userInput.length > 0 ? userInput : FALLBACK_IMAGES
     imagePoolRef.current = userUrls
 
     function getUniqueImage() {
@@ -668,7 +682,7 @@ export default function ImageGallery(props) {
                 position: "relative",
                 width: "100%",
                 height: "100%",
-                background: background ?? "#0c0c0c",
+                background: background ?? "#000000",
                 overflow: "hidden",
             }}
         >
@@ -692,7 +706,30 @@ addPropertyControls(ImageGallery, {
     images: {
         title: "Images",
         type: ControlType.Array,
-        propertyControl: { type: ControlType.ResponsiveImage },
+        control: { type: ControlType.ResponsiveImage },
+        defaultValue: [
+            {
+                src: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1502945015378-0e284ca1a5be?w=600&q=80",
+            },
+            {
+                src: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80",
+            },
+        ],
     },
     type: {
         title: "Type",
@@ -725,7 +762,12 @@ addPropertyControls(ImageGallery, {
             ease: {
                 title: "Ease",
                 type: ControlType.Transition,
-                defaultValue: { type: "tween", duration: 0.5, ease: "easeOut" },
+                defaultValue: {
+                    type: "tween",
+                    duration: 2,
+                    delay: 2,
+                    ease: "linear",
+                },
             },
         },
     },
@@ -743,7 +785,7 @@ addPropertyControls(ImageGallery, {
             ease: {
                 title: "Ease",
                 type: ControlType.Transition,
-                defaultValue: { type: "tween", duration: 0.67, ease: "easeIn" },
+                defaultValue: { type: "tween", duration: 1, ease: "linear" },
             },
             fadeOut: {
                 title: "Fade Out",
@@ -762,7 +804,7 @@ addPropertyControls(ImageGallery, {
     blankArea: {
         title: "Blank Area",
         type: ControlType.Number,
-        defaultValue: 1,
+        defaultValue: 5,
         min: 0,
         max: 100,
         step: 1,
@@ -771,7 +813,7 @@ addPropertyControls(ImageGallery, {
     imageScale: {
         title: "Image Scale",
         type: ControlType.Number,
-        defaultValue: 5,
+        defaultValue: 2,
         min: 1,
         max: 20,
         step: 1,
@@ -796,6 +838,6 @@ addPropertyControls(ImageGallery, {
     background: {
         title: "Background",
         type: ControlType.Color,
-        defaultValue: "#0c0c0c",
+        defaultValue: "#000000",
     },
 })
